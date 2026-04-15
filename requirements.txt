@@ -1,0 +1,14 @@
+# Core database ORM
+sqlalchemy>=2.0.0
+
+# Optional but recommended for SQLAlchemy utilities
+sqlalchemy-utils>=0.41.0
+
+# For database migrations (good practice for SQLAlchemy apps)
+alembic>=1.12.0
+
+# For environment variables (useful for database credentials)
+python-dotenv>=1.0.0
+
+# Note: tkinter and sqlite3 are part of Python standard library
+# They don't need to be installed via pip
