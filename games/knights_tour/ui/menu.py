@@ -1,0 +1,210 @@
+import tkinter as tk
+from ui.board import Board
+from ui.controls import Controls
+from db.db_helper import DatabaseHelper
+import tkinter.simpledialog as simpledialog
+import tkinter.messagebox as messagebox
+
+class MainMenu:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Knight's Tour Problem")
+        # Initialize menu size
+        self.root.geometry("500x400")
+        self.root.resizable(False, False)
+        self.root.configure(bg="#2c3e50")  # background color
+
+        self.menu_frame = None
+        self.board = None
+        self.controls = None
+
+        # Container frame (for better alignment)
+        frame = tk.Frame(root, bg="#2c3e50")
+        frame.pack(expand=True)
+        self.menu_frame = frame
+
+        # Title
+        title = tk.Label(
+            frame,
+            text="Knight's Tour Problem",
+            font=("Arial", 22, "bold"),
+            bg="#2c3e50",
+            fg="white"
+        )
+        title.pack(pady=30)
+
+        # Buttons
+        self.create_button(frame, "Start Game", self.start_game)
+        self.create_button(frame, "View Scores", self.view_scores)
+        self.create_button(frame, "Exit", root.quit)
+
+    def create_button(self, parent, text, command):
+        btn = tk.Button(
+            parent,
+            text=text,
+            command=command,
+            font=("Arial", 14),
+            bg="#3498db",
+            fg="white",
+            activebackground="#2980b9",
+            activeforeground="white",
+            width=20,
+            height=2,
+            bd=0,
+            cursor="hand2"
+        )
+        btn.pack(pady=10)
+
+        # Hover effect (because we have standards now)
+        btn.bind("<Enter>", lambda e: btn.config(bg="#2980b9"))
+        btn.bind("<Leave>", lambda e: btn.config(bg="#3498db"))
+
+    def start_game(self):
+        # Prompt for player name
+        player_name = self._show_player_name_dialog()
+        if not player_name:
+            return  # User cancelled
+        
+        # Get or create player in database
+        try:
+            db = DatabaseHelper()
+            player_id = db.create_or_get_player(player_name)
+            db.close()
+        except Exception as e:
+            messagebox.showerror("Database Error", f"Failed to create player: {e}")
+            return
+        
+        # Hide menu
+        self.menu_frame.pack_forget()
+        
+        # Un-constrain geometry so board and HUD can fit properly
+        self.root.geometry("") 
+        self.root.resizable(True, True)
+        self.root.configure(bg="SystemButtonFace") # Reset to default OS bg
+        
+        # Create board and controls HUD with player_id and callback
+        self.board = Board(self.root, player_id=player_id, on_exit_menu=self.return_to_menu)
+        self.controls = Controls(self.root, self.board)
+
+    def _show_player_name_dialog(self):
+        """Show custom player name input dialog."""
+        dialog = tk.Toplevel(self.root)
+        dialog.title("Enter Your Name")
+        dialog.geometry("400x200")
+        dialog.resizable(False, False)
+        dialog.attributes('-topmost', True)
+        
+        # Center dialog on parent window
+        dialog.transient(self.root)
+        
+        # Title label
+        title_label = tk.Label(
+            dialog,
+            text="What's your name, brave knight?",
+            font=("Arial", 14, "bold"),
+            fg="#2c3e50"
+        )
+        title_label.pack(pady=20)
+        
+        # Input field
+        name_entry = tk.Entry(
+            dialog,
+            font=("Arial", 12),
+            width=25,
+            bg="#ecf0f1",
+            fg="#2c3e50",
+            relief=tk.FLAT,
+            bd=2
+        )
+        name_entry.pack(pady=10)
+        name_entry.focus()
+        
+        # Result variable
+        result = {"name": None}
+        
+        def on_submit():
+            name = name_entry.get().strip()
+            if not name:
+                messagebox.showwarning("Empty Name", "Please enter a valid name!")
+                return
+            if len(name) > 50:
+                messagebox.showwarning("Name Too Long", "Name must be 50 characters or less!")
+                return
+            result["name"] = name
+            dialog.destroy()
+        
+        def on_cancel():
+            dialog.destroy()
+        
+        # Buttons frame
+        button_frame = tk.Frame(dialog)
+        button_frame.pack(pady=20)
+        
+        submit_btn = tk.Button(
+            button_frame,
+            text="Start Adventure",
+            command=on_submit,
+            font=("Arial", 11),
+            bg="#27ae60",
+            fg="white",
+            activebackground="#229954",
+            width=15,
+            bd=0,
+            cursor="hand2"
+        )
+        submit_btn.pack(side=tk.LEFT, padx=5)
+        
+        cancel_btn = tk.Button(
+            button_frame,
+            text="Cancel",
+            command=on_cancel,
+            font=("Arial", 11),
+            bg="#95a5a6",
+            fg="white",
+            activebackground="#7f8c8d",
+            width=15,
+            bd=0,
+            cursor="hand2"
+        )
+        cancel_btn.pack(side=tk.LEFT, padx=5)
+        
+        # Allow Enter key to submit
+        name_entry.bind("<Return>", lambda e: on_submit())
+        
+        # Wait for dialog to close
+        dialog.wait_window()
+        
+        return result["name"]
+
+    def return_to_menu(self):
+        """Return from game to main menu."""
+        # Destroy board and controls
+        if self.board:
+            self.board.canvas.destroy()
+            self.board = None
+        if self.controls:
+            self.controls = None
+        
+        # Clean up any remaining widgets except menu_frame
+        for widget in self.root.winfo_children():
+            if widget != self.menu_frame:
+                widget.destroy()
+        
+        # Reset window geometry and resizability
+        self.root.geometry("500x400")
+        self.root.resizable(False, False)
+        self.root.configure(bg="#2c3e50")
+        
+        # Show menu frame again
+        self.menu_frame.pack(expand=True)
+
+    def view_scores(self):
+        print("Show leaderboard")
+
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = MainMenu(root)
+    root.mainloop()
+
+    
