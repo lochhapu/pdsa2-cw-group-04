@@ -4,6 +4,14 @@ import random
 import time
 from collections import deque
 
+from database import create_tables, get_connection
+
+create_tables()
+
+PLAYER_ID = None
+bfs_time_global = 0
+dfs_time_global = 0
+
 # ---------------- GLOBALS ---------------- #
 PLAYER_NAME = ""
 BOARD_SIZE = 0
@@ -18,12 +26,23 @@ correct_answer = 0
 
 # ---------------- START ---------------- #
 def start_game():
-    global PLAYER_NAME
+    global PLAYER_NAME, PLAYER_ID
+
     PLAYER_NAME = name_entry.get().strip()
 
     if PLAYER_NAME == "":
         messagebox.showerror("Error", "Enter your name!")
         return
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("INSERT INTO players (name) VALUES (?)", (PLAYER_NAME,))
+    conn.commit()
+
+    PLAYER_ID = cursor.lastrowid
+
+    conn.close()
 
     root.withdraw()
     open_board_selection()
@@ -59,10 +78,14 @@ def initialize_game():
 # ---------------- ROUND ---------------- #
 def start_round():
     global snakes, ladders, correct_answer
+    global bfs_time_global, dfs_time_global
 
     snakes, ladders = generate_board(BOARD_SIZE)
 
     correct_answer, dfs_ans, bfs_time, dfs_time = run_algorithms(BOARD_SIZE)
+
+    bfs_time_global = bfs_time
+    dfs_time_global = dfs_time
 
     show_board()
 
@@ -239,16 +262,41 @@ def show_question(answer):
 
     def check(ans):
         global score
-        if ans == answer:
+
+        is_correct = 1 if ans == answer else 0
+
+        if is_correct:
             score += 10
             msg = "Correct!"
         else:
             msg = f"Wrong! Answer: {answer}"
 
+        # SAVE TO DATABASE
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+        INSERT INTO game_rounds 
+        (player_id, round_number, board_size, correct_answer, bfs_time, dfs_time, is_correct)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (
+            PLAYER_ID,
+            currentRound,
+            BOARD_SIZE,
+            answer,
+            bfs_time_global,
+            dfs_time_global,
+            is_correct
+        ))
+
+        conn.commit()
+        conn.close()
+
         messagebox.showinfo("Result", msg)
         window.destroy()
         next_round()
 
+    # buttons MUST be outside check()
     for o in opts:
         tk.Button(window, text=str(o),
                   command=lambda x=o: check(x)).pack(pady=5)
@@ -295,6 +343,36 @@ def show_result():
     tk.Label(window, text=res, font=("Arial", 16)).pack()
 
     tk.Button(window, text="Exit", command=root.destroy).pack(pady=20)
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    INSERT INTO game_results (player_id, final_score, result)
+    VALUES (?, ?, ?)
+    """, (PLAYER_ID, score, res))
+
+    conn.commit()
+    conn.close()
+
+
+def dump_data():
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    print("\n--- PLAYERS ---")
+    for row in cursor.execute("SELECT * FROM players"):
+        print(row)
+
+    print("\n--- ROUNDS ---")
+    for row in cursor.execute("SELECT * FROM game_rounds"):
+        print(row)
+
+    print("\n--- RESULTS ---")
+    for row in cursor.execute("SELECT * FROM game_results"):
+        print(row)
+
+    conn.close()
 
 
 # ---------------- MAIN ---------------- #
