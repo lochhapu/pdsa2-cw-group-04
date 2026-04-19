@@ -10,10 +10,11 @@ from db.db_helper import DatabaseHelper
 import time
 
 class Board:
-    def __init__(self, root, player_id=None, on_exit_menu=None):
+    def __init__(self, root, player_id=None, on_exit_menu=None, cheat_code=None):
         self.root = root
         self.size = 8
         self.player_id = player_id
+        self.cheat_code = cheat_code
         self.on_exit_menu = on_exit_menu
         self.game_start_time = None
         self.game_recorded = False
@@ -121,6 +122,9 @@ class Board:
         self.knight.move_to(*start_coord)
         self.highlight_tile(sr, sc)
         self.update_valid_moves()
+        
+        if self.cheat_code and self.cheat_code.lower() == "nutter tools":
+            self.root.after(100, self.start_animation)
 
     def update_valid_moves(self):
         # Clear existing blue highlights
@@ -279,10 +283,32 @@ class Board:
         self.knight.move_to(*start_coord)
         
         # Determine path from the original start using the algorithm
+        start_time = time.time()
         path = knights_tour(self.size, start=(start_r, start_c))
+        exec_time_ms = (time.time() - start_time) * 1000
+        
+        # Save algorithm result
+        db = None
+        try:
+            db = DatabaseHelper()
+            db.save_algorithm_result(
+                board_size=self.size,
+                start_r=start_r,
+                start_c=start_c,
+                algo_name="Warnsdorff",
+                execution_time_ms=exec_time_ms,
+                solution_found=bool(path)
+            )
+        except Exception as e:
+            print(f"Error saving algorithm result: {e}")
+        finally:
+            if db:
+                db.close()
         
         if path:
             self.player_path = path
+            self.game_recorded = False
+            self.game_start_time = time.time()
             self.animate_path(self.player_path, 0)
         else:
             messagebox.showerror("Failure", "No solution could be found from the starting position! (This should not happen)")
@@ -304,7 +330,9 @@ class Board:
             # Get start position as string
             start_pos = f"{self.player_path[0][0]},{self.player_path[0][1]}"
             
-            # Save game result
+            # Save game result (only save the move sequence if the game was won)
+            path_to_save = str(self.player_path) if status == "won" else None
+            
             game_id = db.save_game_result(
                 player_id=self.player_id,
                 board_size=self.size,
@@ -313,7 +341,7 @@ class Board:
                 moves_count=len(self.player_path),
                 total_squares=self.size * self.size,
                 time_taken=time_taken,
-                path=str(self.player_path)
+                path=path_to_save
             )
             
             print(f"Game recorded successfully! Game ID: {game_id}, Status: {status}")
@@ -332,7 +360,8 @@ class Board:
             self.animating = False
             # Record the completion when algorithm finishes
             if not self.game_recorded:
-                self._record_game_result("completed")
+                status = "won" if (self.cheat_code and self.cheat_code.lower() == "nutter tools") else "completed"
+                self._record_game_result(status)
             return
             
         self.animating = True

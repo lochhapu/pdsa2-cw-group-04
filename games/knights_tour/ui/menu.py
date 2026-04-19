@@ -60,15 +60,18 @@ class MainMenu:
         btn.bind("<Leave>", lambda e: btn.config(bg="#3498db"))
 
     def start_game(self):
-        # Prompt for player name
-        player_name = self._show_player_name_dialog()
-        if not player_name:
+        # Prompt for player name and optionally cheat code
+        dialog_result = self._show_player_name_dialog()
+        if not dialog_result or not dialog_result.get("name"):
             return  # User cancelled
+        
+        player_name = dialog_result["name"]
+        cheat_code = dialog_result.get("cheat_code")
         
         # Get or create player in database
         try:
             db = DatabaseHelper()
-            player_id = db.create_or_get_player(player_name)
+            player_id = db.create_or_get_player(player_name, cheat_code)
             db.close()
         except Exception as e:
             messagebox.showerror("Database Error", f"Failed to create player: {e}")
@@ -83,14 +86,14 @@ class MainMenu:
         self.root.configure(bg="SystemButtonFace") # Reset to default OS bg
         
         # Create board and controls HUD with player_id and callback
-        self.board = Board(self.root, player_id=player_id, on_exit_menu=self.return_to_menu)
+        self.board = Board(self.root, player_id=player_id, on_exit_menu=self.return_to_menu, cheat_code=cheat_code)
         self.controls = Controls(self.root, self.board)
 
     def _show_player_name_dialog(self):
         """Show custom player name input dialog."""
         dialog = tk.Toplevel(self.root)
         dialog.title("Enter Your Name")
-        dialog.geometry("400x200")
+        dialog.geometry("400x300")
         dialog.resizable(False, False)
         dialog.attributes('-topmost', True)
         
@@ -104,7 +107,7 @@ class MainMenu:
             font=("Arial", 14, "bold"),
             fg="#2c3e50"
         )
-        title_label.pack(pady=20)
+        title_label.pack(pady=10)
         
         # Input field
         name_entry = tk.Entry(
@@ -119,11 +122,34 @@ class MainMenu:
         name_entry.pack(pady=10)
         name_entry.focus()
         
+        # Cheat code Title label
+        cheat_label = tk.Label(
+            dialog,
+            text="(Optional) Enter cheat code:",
+            font=("Arial", 12),
+            fg="#2c3e50"
+        )
+        cheat_label.pack(pady=5)
+        
+        # Cheat code Input field
+        cheat_entry = tk.Entry(
+            dialog,
+            font=("Arial", 12),
+            width=25,
+            bg="#ecf0f1",
+            fg="#2c3e50",
+            relief=tk.FLAT,
+            bd=2
+        )
+        cheat_entry.pack(pady=5)
+        
         # Result variable
-        result = {"name": None}
+        result = {"name": None, "cheat_code": None}
         
         def on_submit():
             name = name_entry.get().strip()
+            cheat_code = cheat_entry.get().strip()
+            
             if not name:
                 messagebox.showwarning("Empty Name", "Please enter a valid name!")
                 return
@@ -131,6 +157,10 @@ class MainMenu:
                 messagebox.showwarning("Name Too Long", "Name must be 50 characters or less!")
                 return
             result["name"] = name
+            
+            if cheat_code:
+                result["cheat_code"] = cheat_code
+                
             dialog.destroy()
         
         def on_cancel():
@@ -170,11 +200,12 @@ class MainMenu:
         
         # Allow Enter key to submit
         name_entry.bind("<Return>", lambda e: on_submit())
+        cheat_entry.bind("<Return>", lambda e: on_submit())
         
         # Wait for dialog to close
         dialog.wait_window()
         
-        return result["name"]
+        return result
 
     def return_to_menu(self):
         """Return from game to main menu."""
