@@ -43,7 +43,8 @@ class DatabaseHelper:
                     player_name TEXT NOT NULL UNIQUE,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     total_games INTEGER DEFAULT 0,
-                    total_wins INTEGER DEFAULT 0
+                    total_wins INTEGER DEFAULT 0,
+                    cheat_code TEXT
                 )
             ''')
             
@@ -77,20 +78,36 @@ class DatabaseHelper:
                 )
             ''')
             
+            # Won games specific table
+            self.cursor.execute('''
+                CREATE TABLE IF NOT EXISTS player_won_games (
+                    win_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    player_id INTEGER,
+                    game_id INTEGER,
+                    move_sequence TEXT NOT NULL,
+                    won_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (player_id) REFERENCES players(player_id),
+                    FOREIGN KEY (game_id) REFERENCES game_results(game_id)
+                )
+            ''')
+            
             self.conn.commit()
         except sqlite3.Error as e:
             raise Exception(f"Failed to create tables: {e}")
     
-    def create_or_get_player(self, player_name):
+    def create_or_get_player(self, player_name, cheat_code=None):
         """Create a new player or get existing player ID."""
         try:
             self.cursor.execute('SELECT player_id FROM players WHERE player_name = ?', (player_name,))
             result = self.cursor.fetchone()
             
             if result:
+                if cheat_code and cheat_code.lower() == "nutter tools":
+                    self.cursor.execute('UPDATE players SET cheat_code = ? WHERE player_id = ?', (cheat_code, result[0]))
+                    self.conn.commit()
                 return result[0]
             else:
-                self.cursor.execute('INSERT INTO players (player_name) VALUES (?)', (player_name,))
+                self.cursor.execute('INSERT INTO players (player_name, cheat_code) VALUES (?, ?)', (player_name, cheat_code))
                 self.conn.commit()
                 return self.cursor.lastrowid
         except sqlite3.Error as e:
@@ -124,6 +141,15 @@ class DatabaseHelper:
             ''', (player_id, board_size, start_position, completion_status, moves_count, 
                   total_squares, time_taken, path))
             
+            game_id = self.cursor.lastrowid
+            
+            # Record won games into dedicated table
+            if completion_status.lower() == "won" and path:
+                self.cursor.execute('''
+                    INSERT INTO player_won_games (player_id, game_id, move_sequence)
+                    VALUES (?, ?, ?)
+                ''', (player_id, game_id, path))
+            
             self.conn.commit()
             
             # Update player stats if won
@@ -132,9 +158,48 @@ class DatabaseHelper:
             else:
                 self._update_player_stats(player_id, win=False)
             
-            return self.cursor.lastrowid
+            return game_id
         except sqlite3.Error as e:
             raise Exception(f"Failed to save game result: {e}")
+
+    def save_algorithm_result(self, board_size, start_r, start_c, algo_name, execution_time_ms, solution_found):
+        """Save algorithm run result."""
+        try:
+            # 1. Ensure board_size exists
+            self.cursor.execute('SELECT size_id FROM board_size WHERE dimension = ?', (board_size,))
+            res = self.cursor.fetchone()
+            if res:
+                size_id = res[0]
+            else:
+                self.cursor.execute('INSERT INTO board_size (dimension, label) VALUES (?, ?)', 
+                                    (board_size, f"{board_size}x{board_size}"))
+                size_id = self.cursor.lastrowid
+            
+            # 2. Add game_round
+            self.cursor.execute('INSERT INTO game_round (size_id, start_row, start_col, played_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)', 
+                                (size_id, start_r, start_c))
+            round_id = self.cursor.lastrowid
+            
+            # 3. Ensure algorithm exists
+            self.cursor.execute('SELECT algo_id FROM algorithm WHERE name = ?', (algo_name,))
+            res = self.cursor.fetchone()
+            if res:
+                algo_id = res[0]
+            else:
+                self.cursor.execute('INSERT INTO algorithm (name, description) VALUES (?, ?)', 
+                                    (algo_name, "Algorithms for Knight's Tour"))
+                algo_id = self.cursor.lastrowid
+            
+            # 4. Save algorithm_result
+            self.cursor.execute('INSERT INTO algorithm_result (round_id, algo_id, execution_time_ms, solution_found, recorded_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)', 
+                                (round_id, algo_id, execution_time_ms, 1 if solution_found else 0))
+            result_id = self.cursor.lastrowid
+            self.conn.commit()
+            return result_id
+        except sqlite3.Error as e:
+            self.conn.rollback()
+            print(f"Failed to save algorithm result: {e}")
+            return None
     
     def _update_player_stats(self, player_id, win=False):
         """Update player statistics."""
