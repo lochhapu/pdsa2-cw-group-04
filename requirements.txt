@@ -12,3 +12,6 @@ python-dotenv>=1.0.0
 
 # Note: tkinter and sqlite3 are part of Python standard library
 # They don't need to be installed via pip
+
+# Visualization
+matplotlib>=3.7.0
