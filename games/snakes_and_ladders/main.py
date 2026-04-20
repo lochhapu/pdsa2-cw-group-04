@@ -6,6 +6,7 @@ from collections import deque
 import os
 
 from PIL import Image, ImageTk
+from chart_analysis import add_round_data, show_time_chart
 
 from database import create_tables, get_connection
 from ui_styles import *
@@ -432,6 +433,8 @@ def show_result():
         fg="#86efac"
     ).pack(pady=(0, 25))
 
+    show_time_chart()
+
     # ---------------- PLAY AGAIN BUTTON ---------------- #
     tk.Button(card,
         text="Play Again",
@@ -511,8 +514,7 @@ def start_round():
     snakes, ladders = generate_board(BOARD_SIZE)
     correct_answer, dfs_ans, bfs_time, dfs_time = run_algorithms(BOARD_SIZE)
 
-    bfs_time_global = bfs_time
-    dfs_time_global = dfs_time
+    add_round_data(currentRound, bfs_time, dfs_time)
 
     show_board()
 
