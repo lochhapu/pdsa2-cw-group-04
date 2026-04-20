@@ -1,0 +1,79 @@
+🚦 Traffic Flow Game – README
+
+📌 Overview
+This is a Python-based GUI game built using Tkinter where the player guesses the maximum flow in a network graph. The game uses graph algorithms (Ford-Fulkerson and Edmonds-Karp) to calculate the correct answer and compares it with the player's input.
+
+🎮 How the Game Works
+
+1. The player enters their name to start the game.
+
+2. A directed graph (traffic network) is randomly generated.
+
+3. Each edge has a capacity (5–15), representing road limits.
+
+4. The system calculates the maximum flow from source node A to sink node T using:
+
+   * Ford-Fulkerson algorithm
+   * Edmonds-Karp algorithm
+
+5. The player analyzes the graph and inputs their guess.
+
+6. The game checks if the answer is correct:
+
+   * If correct → result = "win" and score increases
+   * If incorrect → result = "lose"
+
+7. The result is displayed along with algorithm execution times.
+
+8. The player can retry, go to the next round, or return to the main menu.
+
+
+💾 Data Storage (SQLite)
+The game uses a SQLite database (traffic_game.db) with two tables:
+
+1. players
+
+   * Stores unique player names
+   * Each player has a unique ID
+
+2. game_rounds
+
+   * Stores each round played
+   * Links to players using player_id
+   * Saves answers, results, and algorithm timings
+
+🔁 Data Flow
+
+* On submit:
+
+  1. Player is created (if new) or retrieved
+  2. Round data is inserted into game_rounds
+  3. Data is committed to the database
+
+🧠 Key Concepts Used
+
+* Graph Theory (Maximum Flow Problem)
+* Ford-Fulkerson Algorithm (DFS-based)
+* Edmonds-Karp Algorithm (BFS-based)
+* Tkinter for GUI
+* SQLite for persistent storage
+
+📁 Files
+
+* traffic_game.py → Main game code
+* traffic_game.db → Database file (auto-created)
+
+⚠️ Notes
+
+* Player names must be unique
+* Database is persistent across sessions
+
+🚀 Possible Improvements (Not confirmed but lets see)
+
+* Leaderboard system
+* Player history view
+* Difficulty levels
+* Visual path highlighting for flow
+
+🎯 Goal
+To help users understand and practice maximum flow concepts through an interactive visual game.
