@@ -5,7 +5,7 @@ import time
 from collections import deque
 import os
 
-from PIL import Image, ImageTk   # ✅ FIX FOR IMAGE
+from PIL import Image, ImageTk
 
 from database import create_tables, get_connection
 from ui_styles import *
@@ -21,6 +21,9 @@ BOARD_SIZE = 0
 totalRounds = 5
 currentRound = 1
 score = 0
+
+board_timer = 20
+timer_running = False
 
 snakes = {}
 ladders = {}
@@ -54,32 +57,83 @@ main_frame.pack(fill="both", expand=True)
 def show_start():
     card = create_card(main_frame)
 
-    tk.Label(card, text="Snake & Ladder",
-             font=("Segoe UI", 22, "bold"),
-             bg=CARD_COLOR, fg=TEXT).pack(pady=25)
+    # ---------------- TITLE ---------------- #
+    tk.Label(card, text="Snakes & Ladders",
+             font=("Segoe UI", 46, "bold"),
+             bg=CARD_COLOR, fg=TEXT).pack(pady=(20, 5))
 
-    tk.Label(card, text="Enter Player Name",
-             font=("Segoe UI", 12),
-             bg=CARD_COLOR, fg=TEXT).pack(pady=10)
+    # ---------------- SUBTITLE ---------------- #
+    tk.Label(card,
+        text="Welcome! Let's start your adventure",
+        font=("Segoe UI", 16),
+        bg=CARD_COLOR,
+        fg="#86efac"   # light green
+    ).pack(pady=(0, 20))
 
-    global name_entry
-    name_entry = tk.Entry(card,
-        font=("Segoe UI", 14),
-        width=25,
-        justify="center"
+    # ---------------- INPUT FRAME (for border effect) ---------------- #
+    input_frame = tk.Frame(card,
+        bg="#10b981",   # border color (green)
+        padx=2,
+        pady=2
     )
-    name_entry.pack(pady=10)
+    input_frame.pack(pady=10)
 
-    modern_button(card, "Start Game", start_game)
+    # ---------------- ENTRY ---------------- #
+    global name_entry
+    name_entry = tk.Entry(input_frame,
+        font=("Segoe UI", 14),
+        width=28,
+        justify="center",
+        bd=0,
+        bg="#ecfdf5",   # light green background
+        fg="black"
+    )
+    name_entry.pack(ipady=8)   # increase height
 
-    # ---------------- IMAGE FIX (PIL) ---------------- #
+    # ---------------- PLACEHOLDER ---------------- #
+    def on_focus_in(e):
+        if name_entry.get() == "Enter your name here...":
+            name_entry.delete(0, tk.END)
+            name_entry.config(fg="black")
+
+    def on_focus_out(e):
+        if name_entry.get() == "":
+            name_entry.insert(0, "Enter your name here...")
+            name_entry.config(fg="gray")
+
+    name_entry.insert(0, "Enter your name here...")
+    name_entry.config(fg="gray")
+
+    name_entry.bind("<FocusIn>", on_focus_in)
+    name_entry.bind("<FocusOut>", on_focus_out)
+
+    # ---------------- BUTTON (ROUNDED STYLE SIMULATION) ---------------- #
+    btn_frame = tk.Frame(card,
+        bg="#059669",   # darker green border
+        padx=1,
+        pady=1
+    )
+    btn_frame.pack(pady=15)
+
+    tk.Button(btn_frame,
+        text="Start Game",
+        font=("Segoe UI", 13, "bold"),
+        bg=PRIMARY,
+        fg="white",
+        activebackground="#059669",
+        relief="flat",
+        width=18,
+        height=2,
+        cursor="hand2",
+        command=start_game
+    ).pack()
+
+    # ---------------- IMAGE ---------------- #
     img_path = os.path.join("assets", "snake and ladder.png")
 
     try:
         image = Image.open(img_path)
-
-        # resize for UI
-        image = image.resize((450, 300))
+        image = image.resize((380, 260))
 
         img = ImageTk.PhotoImage(image)
 
@@ -87,7 +141,7 @@ def show_start():
             image=img,
             bg=CARD_COLOR
         )
-        img_label.image = img   # 🔥 KEEP REFERENCE
+        img_label.image = img
         img_label.pack(pady=20)
 
     except Exception as e:
@@ -97,67 +151,314 @@ def show_start():
 def show_board_select():
     card = create_card(main_frame)
 
-    tk.Label(card, text=f"Welcome {PLAYER_NAME}",
-             font=FONT_TITLE, bg=CARD_COLOR, fg=TEXT).pack(pady=20)
+    # ---------------- TITLE ---------------- #
+    tk.Label(card, text="Choose Board Size",
+             font=("Segoe UI", 46, "bold"),
+             bg=CARD_COLOR, fg=TEXT).pack(pady=(20, 5))
 
-    for size in [6, 8, 10]:
-        modern_button(card, f"{size} x {size}",
-                      lambda s=size: select_board(s))
+    # ---------------- SUBTITLE ---------------- #
+    tk.Label(card,
+        text="Select your difficulty level",
+        font=("Segoe UI", 16),
+        bg=CARD_COLOR,
+        fg="#86efac"
+    ).pack(pady=(0, 25))
+
+    # ---------------- CONTAINER ---------------- #
+    container = tk.Frame(card, bg=CARD_COLOR)
+    container.pack()
+
+    # ---------------- BUTTON CREATOR ---------------- #
+    def create_option(parent, text_main, text_sub, size):
+
+        outer = tk.Frame(parent,
+            bg="#10b981",   # border color
+            width=260,
+            height=100
+        )
+        outer.pack(pady=12)
+        outer.pack_propagate(False)  # 🔥 FORCE SAME SIZE
+
+        btn = tk.Frame(outer,
+            bg="white",
+            cursor="hand2"
+        )
+        btn.pack(fill="both", expand=True, padx=2, pady=2)
+
+        # main text
+        tk.Label(btn,
+            text=text_main,
+            font=("Segoe UI", 16, "bold"),
+            bg="white",
+            fg="black"
+        ).pack(pady=(15, 0))
+
+        # sub text
+        tk.Label(btn,
+            text=text_sub,
+            font=("Segoe UI", 14),
+            bg="white",
+            fg="#10b981"
+        ).pack()
+
+        # click event (applies to whole card)
+        btn.bind("<Button-1>", lambda e: select_board(size))
+        for child in btn.winfo_children():
+            child.bind("<Button-1>", lambda e: select_board(size))
+
+        # hover effect
+        def on_enter(e):
+            btn.config(bg="#ecfdf5")
+
+        def on_leave(e):
+            btn.config(bg="white")
+
+        btn.bind("<Enter>", on_enter)
+        btn.bind("<Leave>", on_leave)
+
+    # ---------------- OPTIONS ---------------- #
+    create_option(container, "Easy", "6 x 6 Board", 6)
+    create_option(container, "Medium", "8 x 8 Board", 8)
+    create_option(container, "Hard", "10 x 10 Board", 10)
 
 # ---------------- BOARD SCREEN ---------------- #
 def show_board():
+    global board_timer, timer_running
+
     card = create_card(main_frame)
 
-    tk.Label(card,
-        text=f"Round {currentRound}/5   Score: {score}",
-        font=FONT_SUB,
-        bg=CARD_COLOR,
-        fg=TEXT
-    ).pack(pady=10)
+    # ---------------- TOP CHIPS ---------------- #
+    top_frame = tk.Frame(card, bg=CARD_COLOR)
+    top_frame.pack(pady=10)
 
+    def create_chip(parent, text):
+        outer = tk.Frame(parent, bg="#10b981", padx=2, pady=2)
+        outer.pack(side="left", padx=8)
+
+        inner = tk.Label(outer,
+            text=text,
+            bg="#ecfdf5",
+            fg="#065f46",
+            font=("Segoe UI", 11, "bold"),
+            padx=12,
+            pady=6
+        )
+        inner.pack()
+
+    create_chip(top_frame, f"Round {currentRound}/5")
+    create_chip(top_frame, f"Score {score}")
+
+    # ---------------- TIMER DISPLAY ---------------- #
+    timer_label = tk.Label(card,
+        text=f"Time Left: {board_timer}s",
+        font=("Segoe UI", 16, "bold"),
+        bg=CARD_COLOR,
+        fg="#f59e0b"
+    )
+    timer_label.pack(pady=5)
+
+    # ---------------- BOARD ---------------- #
     frame = tk.Frame(card, bg=CARD_COLOR)
     frame.pack()
 
     draw_board(frame, BOARD_SIZE, snakes, ladders)
 
-    modern_button(card, "Continue",
-        lambda: show_question(correct_answer))
+    # ---------------- CONTINUE BUTTON ---------------- #
+    def go_next():
+        global timer_running
+        timer_running = False
+        show_question(correct_answer)
+
+    modern_button(card, "Continue", go_next)
+
+    # ---------------- COUNTDOWN FUNCTION ---------------- #
+    def countdown():
+        global board_timer, timer_running
+
+        if not timer_running:
+            timer_running = True
+
+        if board_timer > 0:
+            timer_label.config(text=f"Time Left: {board_timer}s")
+            board_timer -= 1
+            card.after(1000, countdown)
+        else:
+            # reset timer for next round
+            board_timer = 20
+            timer_running = False
+            show_question(correct_answer)
+
+    # start countdown
+    countdown()
 
 # ---------------- QUESTION SCREEN ---------------- #
 def show_question(answer):
     card = create_card(main_frame)
 
-    tk.Label(card, text="Minimum Dice Throws?",
-             font=FONT_TITLE, bg=CARD_COLOR, fg=TEXT).pack(pady=20)
+    # ---------------- DICE IMAGE ---------------- #
+    img_path = os.path.join("assets", "dice.png")
 
-    opts = [answer - 1, answer, answer + 1]
+    try:
+        dice_img = Image.open(img_path)
+        dice_img = dice_img.resize((80, 80))
+
+        dice = ImageTk.PhotoImage(dice_img)
+
+        dice_label = tk.Label(card,
+            image=dice,
+            bg=CARD_COLOR
+        )
+        dice_label.image = dice  # keep reference
+        dice_label.pack(pady=(10, 5))
+
+    except Exception as e:
+        print("Dice image not loaded:", e)
+
+    # ---------------- TITLE ---------------- #
+    tk.Label(card,
+        text="Minimum Dice Throws?",
+        font=("Segoe UI", 30, "bold"),
+        bg=CARD_COLOR,
+        fg=TEXT
+    ).pack(pady=10)
+
+    # ---------------- SMART OPTIONS ---------------- #
+    options = set()
+    options.add(answer)
+
+    while len(options) < 3:
+        offset = random.choice([-4, -3, -2, 2, 3, 4])
+        wrong = answer + offset
+
+        if wrong > 0:
+            options.add(wrong)
+
+    opts = list(options)
     random.shuffle(opts)
 
+    # ---------------- OPTION BUTTONS ---------------- #
     for o in opts:
-        modern_button(card, str(o),
-                      lambda x=o: check_answer(x, answer))
+        outer = tk.Frame(card, bg="#10b981", padx=2, pady=2)
+        outer.pack(pady=8)
 
+        btn = tk.Button(outer,
+            text=str(o),
+            font=("Segoe UI", 14, "bold"),
+            bg="white",
+            fg="black",
+            width=12,
+            height=2,
+            relief="flat",
+            cursor="hand2",
+            command=lambda x=o: check_answer(x, answer)
+        )
+        btn.pack()
+
+        # hover effect
+        def on_enter(e, b=btn):
+            b.config(bg="#ecfdf5")
+
+        def on_leave(e, b=btn):
+            b.config(bg="white")
+
+        btn.bind("<Enter>", on_enter)
+        btn.bind("<Leave>", on_leave)
+
+    # ---------------- SKIP BUTTON ---------------- #
     tk.Button(card,
         text="Skip (+5 points)",
+        font=("Segoe UI", 11),
         bg="#4b5563",
         fg="white",
         relief="flat",
+        cursor="hand2",
         command=skip
-    ).pack(pady=10)
+    ).pack(pady=15)
 
 # ---------------- RESULT ---------------- #
 def show_result():
     card = create_card(main_frame)
 
-    tk.Label(card, text=f"Final Score: {score}/50",
-             font=FONT_TITLE, bg=CARD_COLOR, fg=TEXT).pack(pady=30)
+    # ---------------- RESULT STATE ---------------- #
+    if score >= 40:
+        result_text = "YOU WIN!"
+        color = "#22c55e"
+        emoji = "🏆"
+    elif score >= 20:
+        result_text = "IT'S A DRAW!"
+        color = "#f59e0b"
+        emoji = "🤝"
+    else:
+        result_text = "YOU LOSE!"
+        color = "#ef4444"
+        emoji = "💀"
 
-    res = "WIN" if score >= 40 else "DRAW" if score >= 20 else "LOSE"
+    # ---------------- GAME OVER ---------------- #
+    tk.Label(card,
+        text="Game Over",
+        font=("Segoe UI", 36, "bold"),
+        bg=CARD_COLOR,
+        fg=TEXT
+    ).pack(pady=(25, 10))
 
-    tk.Label(card, text=res,
-             font=FONT_TITLE, bg=CARD_COLOR, fg=TEXT).pack()
+    # ---------------- ICON ---------------- #
+    tk.Label(card,
+    text=emoji,
+    font=("Segoe UI Emoji", 60),
+    bg=CARD_COLOR,
+    fg=color   # 🔥 match result color
+    ).pack(pady=(0, 10))
 
-    modern_button(card, "Exit", root.destroy)
+    # ---------------- RESULT TEXT ---------------- #
+    tk.Label(card,
+        text=result_text,
+        font=("Segoe UI", 24, "bold"),
+        bg=CARD_COLOR,
+        fg=color
+    ).pack(pady=(0, 15))
+
+    # ---------------- PLAYER INFO ---------------- #
+    tk.Label(card,
+        text=f"Player: {PLAYER_NAME}",
+        font=("Segoe UI", 16),
+        bg=CARD_COLOR,
+        fg=TEXT
+    ).pack(pady=(5, 5))
+
+    tk.Label(card,
+        text=f"Score: {score}/50",
+        font=("Segoe UI", 16, "bold"),
+        bg=CARD_COLOR,
+        fg="#86efac"
+    ).pack(pady=(0, 25))
+
+    # ---------------- PLAY AGAIN BUTTON ---------------- #
+    tk.Button(card,
+        text="Play Again",
+        font=("Segoe UI", 12, "bold"),
+        bg="#10b981",
+        fg="white",
+        activebackground="#059669",
+        relief="flat",
+        cursor="hand2",
+        width=18,
+        height=2,
+        command=show_board_select
+    ).pack(pady=8)
+
+    # ---------------- EXIT BUTTON ---------------- #
+    tk.Button(card,
+        text="Exit Game",
+        font=("Segoe UI", 12, "bold"),
+        bg="#ef4444",
+        fg="white",
+        activebackground="#b91c1c",
+        relief="flat",
+        cursor="hand2",
+        width=18,
+        height=2,
+        command=root.destroy
+    ).pack(pady=5)
 
 # ---------------- GAME LOGIC ---------------- #
 def start_game():
@@ -165,17 +466,28 @@ def start_game():
 
     PLAYER_NAME = name_entry.get().strip()
 
-    if PLAYER_NAME == "":
-        messagebox.showerror("Error", "Enter your name!")
+    # ---------------- VALIDATION FIX ---------------- #
+    if PLAYER_NAME == "" or PLAYER_NAME == "Enter your name here...":
+        messagebox.showerror("Error", "Please enter your name!")
         return
 
+    # extra safety (spaces only)
+    if PLAYER_NAME.strip() == "":
+        messagebox.showerror("Error", "Please enter a valid name!")
+        return
+
+    # ---------------- DATABASE INSERT ---------------- #
     conn = get_connection()
     cursor = conn.cursor()
+
     cursor.execute("INSERT INTO players (name) VALUES (?)", (PLAYER_NAME,))
     conn.commit()
+
     PLAYER_ID = cursor.lastrowid
+
     conn.close()
 
+    # ---------------- NEXT SCREEN ---------------- #
     show_board_select()
 
 

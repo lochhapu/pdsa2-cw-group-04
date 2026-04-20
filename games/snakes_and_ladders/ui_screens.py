@@ -51,20 +51,29 @@ def draw_board(frame, n, snakes, ladders):
         for c in range(n):
             val = row[c]
 
-            bg = "#065f46"
+            # ---------------- DEFAULT ---------------- #
+            bg_color = "#1f2937"   # dark
+            text = str(val)
 
+            # ---------------- LADDER ---------------- #
             if val in ladders:
-                bg = SUCCESS
+                bg_color = "#10b981"   # green
+                text = f"{val}\n🪜"
+
+            # ---------------- SNAKE ---------------- #
             elif val in snakes:
-                bg = DANGER
+                bg_color = "#ef4444"   # red
+                text = f"{val}\n🐍"
 
-            cell = tk.Label(frame,
-                text=str(val),
-                width=5,
-                height=2,
-                bg=bg,
+            # ---------------- TILE ---------------- #
+            tile = tk.Label(frame,
+                text=text,
+                width=6,
+                height=3,
+                bg=bg_color,
                 fg="white",
-                font=("Segoe UI", 10, "bold")
+                font=("Segoe UI", 10, "bold"),
+                relief="flat",
+                justify="center"
             )
-
-            cell.grid(row=r, column=c, padx=3, pady=3)
+            tile.grid(row=r, column=c, padx=2, pady=2)
