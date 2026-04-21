@@ -4,11 +4,13 @@ import matplotlib.pyplot as plt
 round_numbers = []
 bfs_times = []
 dfs_times = []
+round_data = []
 
 
 # ---------------- STORE DATA ---------------- #
 def add_round_data(round_no, bfs_time, dfs_time):
     round_numbers.append(round_no)
+    round_data.append((round_no, bfs_time, dfs_time))
     bfs_times.append(bfs_time)
     dfs_times.append(dfs_time)
 
