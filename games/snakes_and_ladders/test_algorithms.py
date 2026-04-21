@@ -2,7 +2,7 @@
 ## Independent validation
 ## Not just UI-based testing
 ## Tests BFS and DFS independently
-##Ensures they return valid values
+## Ensures they return valid values
 ## Can be run without UI
 ## Helps catch bugs early 
 
