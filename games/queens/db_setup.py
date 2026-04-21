@@ -26,6 +26,7 @@ class PlayerAnswer(Base):
     player_name  = Column(String, nullable=False)
     solution     = Column(String, nullable=False)
     submitted_at = Column(DateTime, default=datetime.now)
+    time_taken = Column(Float, nullable=True)
 
 #3: Solver performance logs
 class SolverRun(Base):
