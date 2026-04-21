@@ -127,8 +127,8 @@ class GameScreen:
         self.canvas.bind("<Button-1>", self._on_click)
         self._draw_board()
 
-        # START overlay button — centered on the board
-        board_w = N * CELL  # 448px
+        # START overlay button
+        board_w = N * CELL
         board_h = N * CELL
         self.start_overlay = tk.Button(
             board_container,
@@ -149,7 +149,6 @@ class GameScreen:
         )
 
         # ── Action Buttons ────────────────────────────────────
-        # FIX: centre the grid inside a centred frame so it has equal margins
         btn_outer = tk.Frame(self.root, bg=BG_DEEP_PURPLE, pady=15)
         btn_outer.pack()   # no fill=tk.X → centres automatically
 
@@ -203,7 +202,7 @@ class GameScreen:
 
     def _on_click(self, event):
         if not self.game_started:
-            return   # board is locked until START is pressed
+            return   # board's locked until START is pressed
         col = event.x // CELL
         row = event.y // CELL
         if not (0 <= row < N and 0 <= col < N):
@@ -363,7 +362,7 @@ class GameScreen:
         tk.Button(win, text="Close", font=("Courier", 10), bg="#4a148c", fg="white",
                   bd=0, padx=15, pady=5, cursor="hand2", command=win.destroy).pack(pady=15)
 
-    # ── Leaderboard (FIXED) ───────────────────────────────────
+    # ── Leaderboard ───────────────────────────────────
     def _progress_window(self):
         session = get_session()
         all_answers = session.query(PlayerAnswer).order_by(PlayerAnswer.submitted_at.asc()).all()
