@@ -28,7 +28,7 @@ class AppLauncher:
             "Minimum Cost Assignment": os.path.join("games", "minimum_cost", "main.py"),
             "Knights Tour": os.path.join("games", "knights_tour", "main.py"),
             "Snakes & Ladders": os.path.join("games", "snakes_and_ladders", "main.py"),
-            "Traffic Simulation": os.path.join("games", "traffic_sim", "main.py"),
+            "Traffic Simulation": os.path.join("games", "Traffic_Simulation", "main.py"),
             "16 Queens": os.path.join("games", "queens", "main.py"),
         }
         
