@@ -2,7 +2,7 @@ import time
 from db_setup import get_session, Solution, SolverRun, init_db
 
 N = 16  # board size
-MAX_SOLUTIONS = 100   # ✅ limit to first 100 solutions only
+MAX_SOLUTIONS = 100   # limited to first 100 solutions only
 
 def is_safe(board, row, col):
     """Check if placing queen at (row, col) is safe."""
@@ -15,7 +15,7 @@ def is_safe(board, row, col):
     return True
 
 def solve(board, row, solutions):
-    # ✅ STOP if limit reached
+    # Stop if limit reached
     if len(solutions) >= MAX_SOLUTIONS:
         return
 
@@ -27,7 +27,7 @@ def solve(board, row, solutions):
         if is_safe(board, row, col):
             board[row] = col
             solve(board, row + 1, solutions)
-            board[row] = -1              # backtrack
+            board[row] = -1  # backtrack
 
 def run_sequential_solver():
     """Run solver, save results to DB, return (solutions, time_taken)."""
