@@ -1,4 +1,5 @@
 import tkinter as tk
+import tkinter.ttk as ttk
 from ui.board import Board
 from ui.controls import Controls
 from db.db_helper import DatabaseHelper
@@ -95,28 +96,52 @@ class MainMenu:
         self.controls = Controls(self.root, self.board)
 
     def _show_player_name_dialog(self):
-        """Show custom player name input dialog."""
+        """Show custom player profile selection dialog."""
         dialog = tk.Toplevel(self.root)
-        dialog.title("Enter Your Name")
-        dialog.geometry("400x300")
+        dialog.title("Select Profile")
+        dialog.geometry("400x380")
         dialog.resizable(False, False)
         dialog.attributes('-topmost', True)
         
         # Center dialog on parent window
         dialog.transient(self.root)
         
+        try:
+            db = DatabaseHelper()
+            players = db.get_all_players()
+            db.close()
+        except:
+            players = []
+            
+        profiles = [p[1] for p in players[:15]]
+        options = profiles + ["+ Create New Profile"]
+        
         # Title label
         title_label = tk.Label(
             dialog,
-            text="What's your name, brave knight?",
+            text="Choose your profile, brave knight!",
             font=("Arial", 14, "bold"),
             fg="#2c3e50"
         )
         title_label.pack(pady=10)
         
-        # Input field
-        name_entry = tk.Entry(
+        profile_var = tk.StringVar()
+        profile_var.set(profiles[0] if profiles else "+ Create New Profile")
+        
+        profile_dropdown = ttk.Combobox(
             dialog,
+            textvariable=profile_var,
+            values=options,
+            state="readonly",
+            font=("Arial", 12),
+            width=23
+        )
+        profile_dropdown.pack(pady=5)
+        
+        new_name_frame = tk.Frame(dialog)
+        
+        name_entry = tk.Entry(
+            new_name_frame,
             font=("Arial", 12),
             width=25,
             bg="#ecf0f1",
@@ -124,8 +149,20 @@ class MainMenu:
             relief=tk.FLAT,
             bd=2
         )
-        name_entry.pack(pady=10)
-        name_entry.focus()
+        name_entry.pack(pady=5)
+        new_name_frame.pack_forget()
+        if not profiles:
+            new_name_frame.pack(pady=5)
+            name_entry.focus()
+            
+        def on_profile_change(*args):
+            if profile_var.get() == "+ Create New Profile":
+                new_name_frame.pack(pady=5)
+                name_entry.focus()
+            else:
+                new_name_frame.pack_forget()
+                
+        profile_var.trace_add("write", on_profile_change)
         
         # Cheat code Title label
         cheat_label = tk.Label(
@@ -152,15 +189,26 @@ class MainMenu:
         result = {"name": None, "cheat_code": None}
         
         def on_submit():
-            name = name_entry.get().strip()
+            is_new = (profile_var.get() == "+ Create New Profile")
+            if is_new:
+                if len(profiles) >= 15:
+                    messagebox.showwarning("Profile Limit", "Maximum of 15 profiles reached. Please choose an existing profile.")
+                    return
+                name = name_entry.get().strip()
+                if not name:
+                    messagebox.showwarning("Empty Name", "Please enter a valid name!")
+                    return
+                if len(name) > 50:
+                    messagebox.showwarning("Name Too Long", "Name must be 50 characters or less!")
+                    return
+                if name in profiles:
+                    messagebox.showwarning("Name Exists", "Profile name already exists. Please choose the profile from the dropdown.")
+                    return
+            else:
+                name = profile_var.get()
+                
             cheat_code = cheat_entry.get().strip()
             
-            if not name:
-                messagebox.showwarning("Empty Name", "Please enter a valid name!")
-                return
-            if len(name) > 50:
-                messagebox.showwarning("Name Too Long", "Name must be 50 characters or less!")
-                return
             result["name"] = name
             
             if cheat_code:
