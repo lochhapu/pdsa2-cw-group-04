@@ -133,9 +133,9 @@ class Board:
         self.blue_highlights.clear()
         
         if len(self.player_path) == self.size * self.size:
-            messagebox.showinfo("You Won!", "Congratulations, you completed the Knight's Tour!")
             self.is_playing = False
             self._record_game_result("won")
+            self._show_win_dialog()
             return
             
         r, c = self.player_path[-1]
@@ -225,7 +225,68 @@ class Board:
         )
         btn_exit.pack(side=tk.LEFT, padx=5)
         
-        # Make dialog modal
+        # Wait for dialog to close
+        dialog.wait_window()
+
+    def _show_win_dialog(self):
+        """Show custom dialog with two options when player wins the game."""
+        dialog = tk.Toplevel(self.root)
+        dialog.title("You Won!")
+        dialog.geometry("400x150")
+        dialog.resizable(False, False)
+        dialog.attributes('-topmost', True)
+        
+        # Center the dialog
+        dialog.transient(self.root)
+        
+        # Message label
+        message = tk.Label(
+            dialog,
+            text="Congratulations, you completed the Knight's Tour!\nWhat would you like to do?",
+            font=("Arial", 12),
+            wraplength=350
+        )
+        message.pack(pady=15)
+        
+        # Button frame
+        button_frame = tk.Frame(dialog)
+        button_frame.pack(pady=5)
+        
+        def on_play_again():
+            dialog.destroy()
+            self.reset_board()
+        
+        def on_exit():
+            dialog.destroy()
+            if self.on_exit_menu:
+                self.on_exit_menu()
+        
+        # Buttons
+        btn_again = tk.Button(
+            button_frame,
+            text="Play Again",
+            command=on_play_again,
+            font=("Arial", 11),
+            width=15,
+            bg="#2ecc71",
+            fg="white",
+            activebackground="#27ae60"
+        )
+        btn_again.pack(side=tk.LEFT, padx=5)
+        
+        btn_exit = tk.Button(
+            button_frame,
+            text="Return to Main Menu",
+            command=on_exit,
+            font=("Arial", 11),
+            width=20,
+            bg="#3498db",
+            fg="white",
+            activebackground="#2980b9"
+        )
+        btn_exit.pack(side=tk.LEFT, padx=5)
+        
+        # Wait for dialog to close
         dialog.wait_window()
 
     def highlight_tile(self, r, c):
