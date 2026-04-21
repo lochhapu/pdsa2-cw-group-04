@@ -2,6 +2,10 @@ import tkinter as tk
 from ui.board import Board
 from ui.controls import Controls
 from db.db_helper import DatabaseHelper
+try:
+    from chart_algo import display_algorithm_chart
+except ImportError:
+    display_algorithm_chart = None
 import tkinter.simpledialog as simpledialog
 import tkinter.messagebox as messagebox
 
@@ -36,6 +40,7 @@ class MainMenu:
         # Buttons
         self.create_button(frame, "Start Game", self.start_game)
         self.create_button(frame, "View Scores", self.view_scores)
+        self.create_button(frame, "View Chart", self.view_chart)
         self.create_button(frame, "Exit", root.quit)
 
     def create_button(self, parent, text, command):
@@ -277,6 +282,17 @@ class MainMenu:
             
         except Exception as e:
             messagebox.showerror("Error", f"Failed to load leaderboard: {e}")
+
+    def view_chart(self):
+        """Display the algorithm comparison chart."""
+        if display_algorithm_chart is None:
+            messagebox.showerror("Error", "Chart algorithms module (chart_algo.py) could not be loaded. Ensure matplotlib is installed.")
+            return
+
+        try:
+            display_algorithm_chart()
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to display chart: {e}")
 
 
 if __name__ == "__main__":

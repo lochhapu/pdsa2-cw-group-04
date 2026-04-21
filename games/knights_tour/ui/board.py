@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import messagebox
 import random
 from PIL import Image, ImageTk
-from logic.knights_tour import knights_tour
+from logic.knights_tour import knights_tour, knights_tour_backtracking
 from logic.moves import MOVES
 from utils.helpers import get_center
 from ui.animation import KnightSprite
@@ -345,8 +345,14 @@ class Board:
         
         # Determine path from the original start using the algorithm
         start_time = time.time()
+        
         path = knights_tour(self.size, start=(start_r, start_c))
         exec_time_ms = (time.time() - start_time) * 1000
+        
+        # Also run backtracking algorithm in background to compare and save data
+        bt_start_time = time.time()
+        bt_path = knights_tour_backtracking(self.size, start=(start_r, start_c))
+        bt_exec_time_ms = (time.time() - bt_start_time) * 1000
         
         # Save algorithm result
         db = None
@@ -359,6 +365,15 @@ class Board:
                 algo_name="Warnsdorff",
                 execution_time_ms=exec_time_ms,
                 solution_found=bool(path)
+            )
+            
+            db.save_algorithm_result(
+                board_size=self.size,
+                start_r=start_r,
+                start_c=start_c,
+                algo_name="Backtracking",
+                execution_time_ms=bt_exec_time_ms,
+                solution_found=bool(bt_path)
             )
         except Exception as e:
             print(f"Error saving algorithm result: {e}")
