@@ -230,7 +230,53 @@ class MainMenu:
         self.menu_frame.pack(expand=True)
 
     def view_scores(self):
-        print("Show leaderboard")
+        try:
+            db = DatabaseHelper()
+            leaderboard = db.get_leaderboard(limit=10, order_by="wins")
+            
+            top = tk.Toplevel(self.root)
+            top.title("Leaderboard")
+            top.geometry("550x350")
+            top.configure(bg="#2c3e50")
+            top.resizable(False, False)
+            
+            title = tk.Label(top, text="Leaderboard", font=("Arial", 18, "bold"), bg="#2c3e50", fg="white")
+            title.pack(pady=15)
+            
+            if not leaderboard:
+                empty = tk.Label(top, text="No scores available yet.", font=("Arial", 12), bg="#2c3e50", fg="white")
+                empty.pack(pady=20)
+            else:
+                header_frame = tk.Frame(top, bg="#34495e")
+                header_frame.pack(fill=tk.X, padx=20, pady=5)
+                
+                headers = ["Rank", "Name", "Total Games", "Wins", "Win Rate %"]
+                widths = [6, 15, 10, 10, 10]
+                
+                for i, (h, w) in enumerate(zip(headers, widths)):
+                    lbl = tk.Label(header_frame, text=h, font=("Arial", 11, "bold"), bg="#34495e", fg="white", width=w)
+                    lbl.grid(row=0, column=i, padx=2, pady=5)
+                
+                for idx, (player_name, total_games, total_wins, win_rate) in enumerate(leaderboard):
+                    row_frame = tk.Frame(top, bg="#2c3e50")
+                    row_frame.pack(fill=tk.X, padx=20, pady=2)
+                    
+                    data = [str(idx+1), player_name, str(total_games), str(total_wins), f"{win_rate}%"]
+                    for i, (val, w) in enumerate(zip(data, widths)):
+                        lbl = tk.Label(row_frame, text=val, font=("Arial", 11), bg="#2c3e50", fg="white", width=w)
+                        lbl.grid(row=0, column=i, padx=2)
+            
+            close_btn = tk.Button(top, text="Close", command=top.destroy, font=("Arial", 12),
+                                  bg="#e74c3c", fg="white", activebackground="#c0392b", activeforeground="white", bd=0, padx=20, pady=5)
+            close_btn.pack(pady=20)
+            
+            # Make the window modal
+            top.transient(self.root)
+            top.grab_set()
+            self.root.wait_window(top)
+            
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to load leaderboard: {e}")
 
 
 if __name__ == "__main__":
