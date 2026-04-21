@@ -423,6 +423,8 @@ class Board:
             if not self.game_recorded:
                 status = "won" if (self.cheat_code and self.cheat_code.lower() == "nutter tools") else "completed"
                 self._record_game_result(status)
+                if status == "won" or status == "completed":
+                    self._show_win_dialog()
             return
             
         self.animating = True
