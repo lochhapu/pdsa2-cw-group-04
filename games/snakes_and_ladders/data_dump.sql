@@ -1,0 +1,54 @@
+BEGIN TRANSACTION;
+CREATE TABLE game_rounds (
+        id             INTEGER PRIMARY KEY AUTOINCREMENT,
+        player_id      INTEGER NOT NULL,
+        round_number   INTEGER NOT NULL,
+        board_size     INTEGER NOT NULL,
+        correct_answer INTEGER NOT NULL,
+        bfs_time       REAL,
+        dfs_time       REAL,
+        is_correct     INTEGER NOT NULL DEFAULT 0,
+        created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (player_id) REFERENCES players(id)
+    );
+INSERT INTO "game_rounds" VALUES(1,1,1,6,4,0.0,0.0,1,'2026-04-22 07:01:24');
+INSERT INTO "game_rounds" VALUES(2,1,2,6,5,0.0,0.0,0,'2026-04-22 07:01:32');
+INSERT INTO "game_rounds" VALUES(3,1,3,6,5,0.0,0.0,0,'2026-04-22 07:01:38');
+INSERT INTO "game_rounds" VALUES(4,1,4,6,2,0.0,0.0,0,'2026-04-22 07:01:45');
+INSERT INTO "game_rounds" VALUES(5,1,5,6,3,0.0,0.0,1,'2026-04-22 07:01:51');
+INSERT INTO "game_rounds" VALUES(6,2,1,6,4,0.0,0.0,1,'2026-04-22 07:03:29');
+INSERT INTO "game_rounds" VALUES(7,2,2,6,4,0.0,0.0,0,'2026-04-22 07:03:34');
+INSERT INTO "game_rounds" VALUES(8,2,3,6,3,0.0,0.0,0,'2026-04-22 07:03:37');
+INSERT INTO "game_rounds" VALUES(9,2,4,6,3,0.0,0.0,0,'2026-04-22 07:03:40');
+INSERT INTO "game_rounds" VALUES(10,2,5,6,4,0.0,0.0,0,'2026-04-22 07:03:44');
+INSERT INTO "game_rounds" VALUES(11,3,1,6,3,0.0,0.0,0,'2026-04-22 07:05:55');
+INSERT INTO "game_rounds" VALUES(12,3,2,6,3,0.0,0.0,0,'2026-04-22 07:06:00');
+INSERT INTO "game_rounds" VALUES(13,3,3,6,4,0.0,0.0,1,'2026-04-22 07:06:04');
+INSERT INTO "game_rounds" VALUES(14,3,4,6,3,0.0,0.0,1,'2026-04-22 07:06:09');
+INSERT INTO "game_rounds" VALUES(15,3,5,6,2,0.0,0.0,0,'2026-04-22 07:06:14');
+INSERT INTO "game_rounds" VALUES(16,4,1,8,2,2.449983730912208557e-05,3.800005652010440826e-05,0,'2026-04-22 07:08:36');
+INSERT INTO "game_rounds" VALUES(17,4,2,8,2,3.220001235604286193e-05,2.639996819198131562e-05,0,'2026-04-22 07:08:40');
+INSERT INTO "game_rounds" VALUES(18,4,3,8,4,4.720012657344341278e-05,3.180000931024551392e-05,0,'2026-04-22 07:08:44');
+INSERT INTO "game_rounds" VALUES(19,4,4,8,5,7.049995474517345428e-05,9.00006853044033e-06,1,'2026-04-22 07:08:47');
+INSERT INTO "game_rounds" VALUES(20,4,5,8,4,8.25999304652214e-05,5.710008554160594941e-05,0,'2026-04-22 07:08:53');
+CREATE TABLE game_sessions (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        player_id   INTEGER NOT NULL,
+        board_size  INTEGER NOT NULL,
+        final_score INTEGER,
+        created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (player_id) REFERENCES players(id)
+    );
+CREATE TABLE players (
+        id         INTEGER PRIMARY KEY AUTOINCREMENT,
+        name       TEXT    NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+INSERT INTO "players" VALUES(1,'Trish','2026-04-22 07:01:20');
+INSERT INTO "players" VALUES(2,'Trish','2026-04-22 07:03:23');
+INSERT INTO "players" VALUES(3,'Trish','2026-04-22 07:05:49');
+INSERT INTO "players" VALUES(4,'trish','2026-04-22 07:08:32');
+DELETE FROM "sqlite_sequence";
+INSERT INTO "sqlite_sequence" VALUES('players',4);
+INSERT INTO "sqlite_sequence" VALUES('game_rounds',20);
+COMMIT;

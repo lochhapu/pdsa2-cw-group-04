@@ -42,15 +42,15 @@ def create_tables():
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS game_rounds (
         id             INTEGER PRIMARY KEY AUTOINCREMENT,
-        session_id     INTEGER NOT NULL,
+        player_id      INTEGER NOT NULL,
         round_number   INTEGER NOT NULL,
+        board_size     INTEGER NOT NULL,
         correct_answer INTEGER NOT NULL,
-        player_answer  INTEGER,
-        is_correct     INTEGER NOT NULL DEFAULT 0,
         bfs_time       REAL,
         dfs_time       REAL,
+        is_correct     INTEGER NOT NULL DEFAULT 0,
         created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (session_id) REFERENCES game_sessions(id)
+        FOREIGN KEY (player_id) REFERENCES players(id)
     )
     """)
 

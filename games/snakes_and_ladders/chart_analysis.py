@@ -15,6 +15,12 @@ def add_round_data(round_no, bfs_time, dfs_time):
     dfs_times.append(dfs_time)
 
 
+def clear_round_data():          # ← ADD THIS
+    round_numbers.clear()
+    bfs_times.clear()
+    dfs_times.clear()
+    round_data.clear()
+
 # ---------------- PLOT CHART ---------------- #
 def show_time_chart():
     plt.figure(figsize=(8, 5))

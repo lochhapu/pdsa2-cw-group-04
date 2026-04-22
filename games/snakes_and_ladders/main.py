@@ -6,7 +6,7 @@ from collections import deque
 import os
 
 from PIL import Image, ImageTk
-from chart_analysis import add_round_data, round_data
+from chart_analysis import add_round_data, round_data, clear_round_data, show_time_chart
 
 from database import create_tables, get_connection
 from ui_styles import *
@@ -19,7 +19,7 @@ PLAYER_ID = None
 PLAYER_NAME = ""
 BOARD_SIZE = 0
 
-totalRounds = 5
+totalRounds = 20
 currentRound = 1
 score = 0
 
@@ -378,6 +378,8 @@ def show_question(answer):
 
 # ---------------- DETAILED RESULTS ---------------- #
 def show_detailed_results():
+    import chart_analysis
+    print(f"DEBUG show_detailed_results: round_data = {chart_analysis.round_data}")
     card = create_card(main_frame)
 
     tk.Label(card,
@@ -525,7 +527,7 @@ def show_result():
     ).pack(pady=(0, 25))
 
     # ---------------- CHART ---------------- #
-    #show_time_chart()
+    show_time_chart()
 
     # ---------------- BUTTON CONTAINER ---------------- #
     btn_container = tk.Frame(card, bg=CARD_COLOR)
@@ -621,12 +623,15 @@ def start_round():
     global bfs_time_global, dfs_time_global
 
     snakes, ladders = generate_board(BOARD_SIZE)
-    correct_answer, dfs_ans, bfs_time, dfs_time = run_algorithms(BOARD_SIZE)
+    correct_answer, dfs_ans, bfs_time_global, dfs_time_global = run_algorithms(BOARD_SIZE)
 
-    add_round_data(currentRound, bfs_time, dfs_time)
+    print(f"DEBUG start_round: round={currentRound}, bfs={bfs_time_global}, dfs={dfs_time_global}")
+
+    add_round_data(currentRound, bfs_time_global, dfs_time_global)
+
+    print(f"DEBUG round_data after add: {round_data}")
 
     show_board()
-
 
 def check_answer(ans, correct):
     global score
@@ -765,13 +770,13 @@ def run_algorithms(n):
     start = 1
     end = n * n
 
-    t1 = time.time()
+    t1 = time.perf_counter()          # ← was time.time()
     bfs_ans = bfs(start, end)
-    bfs_time = time.time() - t1
+    bfs_time = time.perf_counter() - t1   # ← was time.time()
 
-    t2 = time.time()
+    t2 = time.perf_counter()          # ← was time.time()
     dfs_ans = dfs_limited(start, end)
-    dfs_time = time.time() - t2
+    dfs_time = time.perf_counter() - t2   # ← was time.time()
 
     return bfs_ans, dfs_ans, bfs_time, dfs_time
 
