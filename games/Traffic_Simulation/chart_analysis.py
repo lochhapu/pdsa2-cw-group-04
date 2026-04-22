@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 
 # Pull only the algorithm functions and graph generator from the game
-from traffic_game import generate_graph, ford_fulkerson, edmonds_karp
+from main import generate_graph, ford_fulkerson, edmonds_karp
 
 # ─────────────────────────────────────────────
 #  SIMULATE 20 ROUNDS
