@@ -48,9 +48,6 @@ class Controls:
         # Apply size button
         self._create_button(button_frame, "Apply Size", self.apply_size).pack(side=tk.LEFT, padx=5)
 
-        # Start button
-        self._create_button(button_frame, "Start Tour", self.board.start_animation).pack(side=tk.LEFT, padx=5)
-
         # Compare Algorithms button
         self._create_button(button_frame, "Compare", self.compare_algorithms).pack(side=tk.LEFT, padx=5)
 
