@@ -194,16 +194,16 @@ class Board:
             title="You Got Stuck!",
             message="You got stuck! What would you like to do?",
             buttons=[
-                ("God take the wheel", lambda: self._on_stuck_algorithm()),
+                ("Try again", lambda: self._on_stuck_algorithm()),
                 ("Exit to Menu", lambda: self._on_stuck_exit())
             ]
         )
 
     def _on_stuck_algorithm(self):
-        """Handle algorithm selection when stuck."""
+        """Handle try again when stuck."""
         self._clear_overlay()
         self._record_game_result("died")
-        self._start_algorithm_from_beginning()
+        self.reset_board()
 
     def _on_stuck_exit(self):
         """Handle exit to menu when stuck."""
