@@ -23,20 +23,20 @@ class MainMenu:
         self.notification_label = None
         self.notification_timer = None
 
+        # Top title label
+        top_title = tk.Label(
+            root,
+            text="Knight's Tour",
+            font=("Arial", 28, "bold"),
+            bg="#2c3e50",
+            fg="#ffffff"
+        )
+        top_title.pack(pady=15)
+
         # Container frame (for better alignment)
         frame = tk.Frame(root, bg="#2c3e50")
         frame.pack(expand=True, fill=tk.BOTH)
         self.menu_frame = frame
-
-        # Title
-        title = tk.Label(
-            frame,
-            text="Knight's Tour",
-            font=("Arial", 22, "bold"),
-            bg="#2c3e50",
-            fg="white"
-        )
-        title.pack(pady=10)
 
         # Animation
         self.idle_frames = []
