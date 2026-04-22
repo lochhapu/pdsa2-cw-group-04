@@ -20,6 +20,11 @@ class Board:
         self.overlay_panel = None
         self.notification_label = None
         self.notification_timer = None
+        self.streak_count = 0
+
+        # Streak label above the board
+        self.streak_label = tk.Label(root, text=f"Streak: {self.streak_count}", font=("Arial", 14, "bold"), bg="#2c3e50", fg="#f1c40f")
+        self.streak_label.pack(pady=5)
 
         # Container frame for canvas and overlays with dark background
         self.container = tk.Frame(root, bg="#2c3e50")
@@ -114,9 +119,13 @@ class Board:
 
     def set_size(self, size):
         self.size = size
-        self.reset_board()
+        self.reset_board(reset_streak=True)
 
-    def reset_board(self):
+    def reset_board(self, reset_streak=False):
+        if reset_streak or (self.is_playing and len(self.player_path) > 1):
+            self.streak_count = 0
+            self.streak_label.config(text=f"Streak: {self.streak_count}")
+            
         self.draw_board()
         
         # Pick a random starting point
@@ -144,6 +153,8 @@ class Board:
         
         if len(self.player_path) == self.size * self.size:
             self.is_playing = False
+            self.streak_count += 1
+            self.streak_label.config(text=f"Streak: {self.streak_count}")
             self._record_game_result("won")
             self._show_win_dialog()
             return
@@ -163,6 +174,8 @@ class Board:
             
             def on_death_done():
                 self.animating = False
+                self.streak_count = 0
+                self.streak_label.config(text=f"Streak: {self.streak_count}")
                 self._show_stuck_dialog()
                 
             self.knight.animate_death(callback=on_death_done)
@@ -371,6 +384,8 @@ class Board:
                 status = "won" if (self.cheat_code and self.cheat_code.lower() == "nutter tools") else "completed"
                 self._record_game_result(status)
                 if status == "won" or status == "completed":
+                    self.streak_count += 1
+                    self.streak_label.config(text=f"Streak: {self.streak_count}")
                     self._show_win_dialog()
             return
             

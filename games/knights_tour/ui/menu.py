@@ -8,7 +8,7 @@ try:
 except ImportError:
     display_algorithm_chart = None
 import os
-from PIL import Image, ImageTk
+from PIL import Image, ImageTk, ImageOps
 
 class MainMenu:
     def __init__(self, root):
@@ -39,15 +39,24 @@ class MainMenu:
         title.pack(pady=10)
 
         # Animation
-        self.idle_frames = []
+        self.idle_frames_right = []
+        self.idle_frames_left = []
+        self.attack_frames_right = []
+        self.attack_frames_left = []
+        self.facing_right = True
+        self.current_action = "idle"
+        self.attack_frame_idx = 0
+        self.pending_command = None
+        self.action_in_progress = False
+
         self.idle_frame_idx = 0
         self.animation_job = None
         try:
             base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
             idle_path = os.path.join(base_dir, "assets", "knight", "IDLE.png")
+            attack_path = os.path.join(base_dir, "assets", "knight", "ATTACK 1.png")
             
             sheet = Image.open(idle_path)
-            # The IDLE sprite has 7 frames, so width is 672 / 7 = 96
             num_frames = 7
             frame_width = sheet.width // num_frames
             scale_factor = 2 
@@ -55,19 +64,55 @@ class MainMenu:
             for i in range(num_frames):
                 frame_img = sheet.crop((i * frame_width, 0, (i + 1) * frame_width, sheet.height))
                 frame_img = frame_img.resize((frame_width * scale_factor, sheet.height * scale_factor), Image.NEAREST)
-                self.idle_frames.append(ImageTk.PhotoImage(frame_img))
+                self.idle_frames_right.append(ImageTk.PhotoImage(frame_img))
+                self.idle_frames_left.append(ImageTk.PhotoImage(ImageOps.mirror(frame_img)))
+                
+            try:
+                sheet_atk = Image.open(attack_path)
+                num_frames_atk = sheet_atk.width // frame_width
+                for i in range(num_frames_atk):
+                    frame_img = sheet_atk.crop((i * frame_width, 0, (i + 1) * frame_width, sheet_atk.height))
+                    frame_img = frame_img.resize((frame_width * scale_factor, sheet_atk.height * scale_factor), Image.NEAREST)
+                    self.attack_frames_right.append(ImageTk.PhotoImage(frame_img))
+                    self.attack_frames_left.append(ImageTk.PhotoImage(ImageOps.mirror(frame_img)))
+            except Exception as e:
+                print("Failed to load ATTACK animation:", e)
                 
             self.anim_label = tk.Label(frame, bg="#2c3e50")
             self.anim_label.pack(pady=10)
-            self._animate_idle()
+            self._animate_knight()
         except Exception as e:
-            print("Failed to load IDLE animation:", e)
+            print("Failed to load animations:", e)
+
+        # Mouse tracking for mirroring
+        self.root.bind('<Motion>', self._on_mouse_motion)
 
         # Buttons
-        self.create_button(frame, "Start Game", self.start_game)
-        self.create_button(frame, "View Scores", self.view_scores)
-        self.create_button(frame, "View Chart", self.view_chart)
-        self.create_button(frame, "Exit", root.quit)
+        self.create_button(frame, "Start Game", self.wrap_command(self.start_game))
+        self.create_button(frame, "View Scores", self.wrap_command(self.view_scores))
+        self.create_button(frame, "View Chart", self.wrap_command(self.view_chart))
+        self.create_button(frame, "Exit", self.wrap_command(root.quit))
+
+    def _on_mouse_motion(self, event):
+        if self.current_action != "attack":
+            screen_width = self.root.winfo_width()
+            if screen_width > 0:
+                self.facing_right = (event.x > screen_width / 2)
+
+    def wrap_command(self, cmd):
+        def wrapped(*args, **kwargs):
+            if self.action_in_progress:
+                return
+            self.action_in_progress = True
+            
+            if self.attack_frames_right:
+                self.current_action = "attack"
+                self.attack_frame_idx = 0
+                self.pending_command = cmd
+            else:
+                self.action_in_progress = False
+                cmd()
+        return wrapped
 
     def create_button(self, parent, text, command):
         btn = tk.Button(
@@ -90,11 +135,35 @@ class MainMenu:
         btn.bind("<Enter>", lambda e: btn.config(bg="#2980b9"))
         btn.bind("<Leave>", lambda e: btn.config(bg="#3498db"))
 
-    def _animate_idle(self):
-        if self.idle_frames:
-            self.anim_label.config(image=self.idle_frames[self.idle_frame_idx])
-            self.idle_frame_idx = (self.idle_frame_idx + 1) % len(self.idle_frames)
-            self.animation_job = self.root.after(100, self._animate_idle)
+    def _animate_knight(self):
+        if not hasattr(self, 'anim_label') or not self.anim_label.winfo_exists():
+            return
+            
+        if self.current_action == "idle":
+            frames = self.idle_frames_right if self.facing_right else self.idle_frames_left
+            if frames:
+                self.anim_label.config(image=frames[self.idle_frame_idx])
+                self.idle_frame_idx = (self.idle_frame_idx + 1) % len(frames)
+        elif self.current_action == "attack":
+            frames = self.attack_frames_right if self.facing_right else self.attack_frames_left
+            if frames:
+                if self.attack_frame_idx < len(frames):
+                    self.anim_label.config(image=frames[self.attack_frame_idx])
+                    self.attack_frame_idx += 1
+                else:
+                    # Attack finished
+                    self.current_action = "idle"
+                    self.attack_frame_idx = 0
+                    if self.pending_command:
+                        cmd = self.pending_command
+                        self.pending_command = None
+                        self.root.after(50, lambda: self._execute_delayed_command(cmd))
+        
+        self.animation_job = self.root.after(100, self._animate_knight)
+
+    def _execute_delayed_command(self, cmd):
+        self.action_in_progress = False
+        cmd()
 
     def start_game(self):
         """Show profile selection panel instead of dialog."""
@@ -174,12 +243,12 @@ class MainMenu:
         new_name_frame.pack_forget()
         
         if not profiles:
-            new_name_frame.pack(pady=5)
+            new_name_frame.pack(pady=5, after=profile_dropdown)
             name_entry.focus()
         
         def on_profile_change(*args):
             if profile_var.get() == "+ Create New Profile":
-                new_name_frame.pack(pady=5)
+                new_name_frame.pack(pady=5, after=profile_dropdown)
                 name_entry.focus()
             else:
                 new_name_frame.pack_forget()
@@ -267,7 +336,7 @@ class MainMenu:
         submit_btn = tk.Button(
             button_frame,
             text="Start Adventure",
-            command=on_submit,
+            command=self.wrap_command(on_submit),
             font=("Arial", 11),
             bg="#27ae60",
             fg="white",
@@ -281,7 +350,7 @@ class MainMenu:
         cancel_btn = tk.Button(
             button_frame,
             text="Cancel",
-            command=on_cancel,
+            command=self.wrap_command(on_cancel),
             font=("Arial", 11),
             bg="#95a5a6",
             fg="white",
@@ -293,8 +362,8 @@ class MainMenu:
         cancel_btn.pack(side=tk.LEFT, padx=5)
         
         # Bind Enter key
-        name_entry.bind("<Return>", lambda e: on_submit())
-        cheat_entry.bind("<Return>", lambda e: on_submit())
+        name_entry.bind("<Return>", lambda e: self.wrap_command(on_submit)())
+        cheat_entry.bind("<Return>", lambda e: self.wrap_command(on_submit)())
 
     def _start_game_with_player(self, player_id, cheat_code):
         """Start the game with the given player."""
