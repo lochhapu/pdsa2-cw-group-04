@@ -257,7 +257,7 @@ class GameScreen:
         elapsed = datetime.now() - self.start_time
         time_str = f"{elapsed.total_seconds():.1f} seconds"
 
-        board_str = ",".join([str(int(x)) for x in self.board])
+        board_str = ",".join(map(str, self.board))
         session = get_session()
 
         try:
@@ -295,7 +295,7 @@ class GameScreen:
 
             total = session.query(Solution).count()
             claimed = session.query(Solution).filter_by(is_claimed=True).count()
-            if not is_new:
+            if is_new:
                 total = session.query(Solution).count()
                 claimed = session.query(Solution).filter_by(is_claimed=True).count()
 
@@ -324,28 +324,7 @@ class GameScreen:
         win = tk.Toplevel(self.root)
         win.title(title)
         win.configure(bg=BG_DEEP_PURPLE)
-        # win.geometry("450x250")
-
-        win.update_idletasks()
-
-        # Get main window position and size
-        main_x = self.root.winfo_rootx()
-        main_y = self.root.winfo_rooty()
-        main_width = self.root.winfo_width()
-        main_height = self.root.winfo_height()
-
-        # Popup size
-        popup_width = 450
-        popup_height = 250
-
-      # Calculate center position
-        x = main_x + (main_width // 2) - (popup_width // 2)
-        y = main_y + (main_height // 2) - (popup_height // 2)
-
-        win.geometry(f"{popup_width}x{popup_height}+{x}+{y}")
-
-
-
+        win.geometry("450x250")
         win.resizable(False, False)
         win.grab_set()
 
