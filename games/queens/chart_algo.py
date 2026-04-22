@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
+import time
 from sequential import run_sequential_solver
 from threaded import run_threaded_solver
 
@@ -7,7 +8,7 @@ def generate_comparison_chart():
     print("Starting 20 rounds of algorithm analysis...")
     seq_times = []
     thr_times = []
-    rounds = list(range(1, 21))
+    rounds = list(range(1,21))
     
     print("Running Sequential Algorithm...")
     for i in rounds:
@@ -40,9 +41,12 @@ def generate_comparison_chart():
     plt.savefig(save_path, bbox_inches='tight')
     print(f"\nChart successfully generated and saved to {save_path}")
 
-    plt.gca().yaxis.set_major_locator(mticker.MaxNLocator(nbins=15))
     
-    # Display chart
+
+    plt.gca().yaxis.set_major_locator(mticker.MultipleLocator(0.1))
+    plt.gca().yaxis.set_major_formatter(mticker.FormatStrFormatter('%.2f'))
+    
+    # Optional: Display the interactive chart
     plt.show()
 
 if __name__ == "__main__":
