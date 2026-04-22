@@ -19,7 +19,7 @@ PLAYER_ID = None
 PLAYER_NAME = ""
 BOARD_SIZE = 0
 
-totalRounds = 5
+totalRounds = 20
 currentRound = 1
 score = 0
 
