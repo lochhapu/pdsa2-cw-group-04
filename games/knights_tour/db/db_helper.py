@@ -91,6 +91,75 @@ class DatabaseHelper:
                 )
             ''')
             
+            # Algorithm table
+            self.cursor.execute('''
+                CREATE TABLE IF NOT EXISTS algorithm (
+                    algo_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    description TEXT
+                )
+            ''')
+            
+            # Board size table
+            self.cursor.execute('''
+                CREATE TABLE IF NOT EXISTS board_size (
+                    size_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    dimension INTEGER NOT NULL,
+                    label TEXT NOT NULL
+                )
+            ''')
+            
+            # Game round table
+            self.cursor.execute('''
+                CREATE TABLE IF NOT EXISTS game_round (
+                    round_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    size_id INTEGER NOT NULL,
+                    start_row INTEGER NOT NULL,
+                    start_col INTEGER NOT NULL,
+                    played_at TEXT,
+                    FOREIGN KEY (size_id) REFERENCES board_size(size_id)
+                )
+            ''')
+            
+            # Algorithm result table
+            self.cursor.execute('''
+                CREATE TABLE IF NOT EXISTS algorithm_result (
+                    result_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    round_id INTEGER NOT NULL,
+                    algo_id INTEGER NOT NULL,
+                    execution_time_ms REAL NOT NULL,
+                    solution_found INTEGER NOT NULL,
+                    recorded_at TEXT,
+                    FOREIGN KEY (algo_id) REFERENCES algorithm(algo_id),
+                    FOREIGN KEY (round_id) REFERENCES game_round(round_id)
+                )
+            ''')
+            
+            # Move sequence table
+            self.cursor.execute('''
+                CREATE TABLE IF NOT EXISTS move_sequence (
+                    move_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    result_id INTEGER NOT NULL,
+                    step_number INTEGER NOT NULL,
+                    row INTEGER NOT NULL,
+                    col INTEGER NOT NULL,
+                    FOREIGN KEY (result_id) REFERENCES algorithm_result(result_id)
+                )
+            ''')
+            
+            # Player answer table
+            self.cursor.execute('''
+                CREATE TABLE IF NOT EXISTS player_answer (
+                    answer_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    round_id INTEGER NOT NULL,
+                    player_name TEXT NOT NULL,
+                    submitted_sequence TEXT NOT NULL,
+                    is_correct INTEGER NOT NULL,
+                    submitted_at TEXT,
+                    FOREIGN KEY (round_id) REFERENCES game_round(round_id)
+                )
+            ''')
+            
             self.conn.commit()
         except sqlite3.Error as e:
             raise Exception(f"Failed to create tables: {e}")

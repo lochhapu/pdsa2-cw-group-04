@@ -1,4 +1,5 @@
 from logic.moves import MOVES
+import time
 
 def is_valid(x, y, board, size):
     return 0 <= x < size and 0 <= y < size and board[x][y] == -1
@@ -51,21 +52,27 @@ def knights_tour(size, start=(0, 0), visited_path=None):
     return path
 
 
-def knights_tour_backtracking(size, start=(0, 0)):
+def knights_tour_backtracking(size, start=(0, 0), timeout_seconds=10):
     """
     Solves the Knight's Tour problem using backtracking algorithm.
     
     Args:
         size: Board size (e.g., 8 for 8x8 board)
         start: Starting position as tuple (row, col)
+        timeout_seconds: Maximum time to spend searching (default 10 seconds)
     
     Returns:
         Path as list of tuples if solution found, None otherwise
     """
     board = [[-1 for _ in range(size)] for _ in range(size)]
     path = []
+    start_time = time.time()
     
     def backtrack(x, y, step):
+        # Check timeout to prevent hanging
+        if time.time() - start_time > timeout_seconds:
+            return False
+        
         # Mark current position as visited with step number
         board[x][y] = step
         path.append((x, y))

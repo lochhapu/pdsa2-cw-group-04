@@ -6,7 +6,7 @@ from collections import deque
 import os
 
 from PIL import Image, ImageTk
-from chart_analysis import add_round_data, show_time_chart
+from chart_analysis import add_round_data, round_data
 
 from database import create_tables, get_connection
 from ui_styles import *
@@ -376,6 +376,97 @@ def show_question(answer):
         command=skip
     ).pack(pady=15)
 
+# ---------------- DETAILED RESULTS ---------------- #
+def show_detailed_results():
+    card = create_card(main_frame)
+
+    tk.Label(card,
+        text="Detailed Round Results",
+        font=("Segoe UI", 28, "bold"),
+        bg=CARD_COLOR,
+        fg=TEXT
+    ).pack(pady=20)
+
+    table_frame = tk.Frame(card, bg=CARD_COLOR)
+    table_frame.pack(pady=10)
+
+    headers = ["Round", "BFS Time (s)", "DFS Time (s)"]
+
+    for col, h in enumerate(headers):
+        tk.Label(table_frame,
+            text=h,
+            font=("Segoe UI", 12, "bold"),
+            bg="#10b981",
+            fg="white",
+            width=18,
+            pady=8
+        ).grid(row=0, column=col, padx=2, pady=2)
+
+    from chart_analysis import round_data
+
+    total_bfs = 0
+    total_dfs = 0
+
+    for i, (round_no, bfs_t, dfs_t) in enumerate(round_data, start=1):
+
+        total_bfs += bfs_t
+        total_dfs += dfs_t
+
+        values = [
+            round_no,
+            f"{bfs_t:.6f}",
+            f"{dfs_t:.6f}"
+        ]
+
+        for col, val in enumerate(values):
+            tk.Label(table_frame,
+                text=val,
+                font=("Segoe UI", 11),
+                bg="#ecfdf5" if i % 2 == 0 else "white",
+                fg="black",
+                width=18,
+                pady=6
+            ).grid(row=i, column=col, padx=2, pady=2)
+
+    # ---------------- TOTAL ROW ---------------- #
+    row_index = len(round_data) + 1
+
+    tk.Label(table_frame,
+        text="TOTAL",
+        font=("Segoe UI", 11, "bold"),
+        bg="#10b981",
+        fg="white",
+        width=18,
+        pady=8
+    ).grid(row=row_index, column=0, padx=2, pady=2)
+
+    tk.Label(table_frame,
+        text=f"{total_bfs:.6f}",
+        font=("Segoe UI", 11, "bold"),
+        bg="#10b981",
+        fg="white",
+        width=18,
+        pady=8
+    ).grid(row=row_index, column=1, padx=2, pady=2)
+
+    tk.Label(table_frame,
+        text=f"{total_dfs:.6f}",
+        font=("Segoe UI", 11, "bold"),
+        bg="#10b981",
+        fg="white",
+        width=18,
+        pady=8
+    ).grid(row=row_index, column=2, padx=2, pady=2)
+
+    tk.Button(card,
+        text="Back",
+        font=("Segoe UI", 11, "bold"),
+        bg="#4b5563",
+        fg="white",
+        relief="flat",
+        command=show_result
+    ).pack(pady=20)
+
 # ---------------- RESULT ---------------- #
 def show_result():
     card = create_card(main_frame)
@@ -433,10 +524,28 @@ def show_result():
         fg="#86efac"
     ).pack(pady=(0, 25))
 
-    show_time_chart()
+    # ---------------- CHART ---------------- #
+    #show_time_chart()
+
+    # ---------------- BUTTON CONTAINER ---------------- #
+    btn_container = tk.Frame(card, bg=CARD_COLOR)
+    btn_container.pack(pady=15)
+
+    # ---------------- SHOW TABLE BUTTON ---------------- #
+    tk.Button(btn_container,
+        text="Show Detailed Results",
+        font=("Segoe UI", 12, "bold"),
+        bg="#3b82f6",
+        fg="white",
+        relief="flat",
+        cursor="hand2",
+        width=18,
+        height=2,
+        command=show_detailed_results
+    ).pack(pady=6)
 
     # ---------------- PLAY AGAIN BUTTON ---------------- #
-    tk.Button(card,
+    tk.Button(btn_container,
         text="Play Again",
         font=("Segoe UI", 12, "bold"),
         bg="#10b981",
@@ -447,10 +556,10 @@ def show_result():
         width=18,
         height=2,
         command=show_board_select
-    ).pack(pady=8)
+    ).pack(pady=6)
 
     # ---------------- EXIT BUTTON ---------------- #
-    tk.Button(card,
+    tk.Button(btn_container,
         text="Exit Game",
         font=("Segoe UI", 12, "bold"),
         bg="#ef4444",
@@ -461,7 +570,7 @@ def show_result():
         width=18,
         height=2,
         command=root.destroy
-    ).pack(pady=5)
+    ).pack(pady=6)
 
 # ---------------- GAME LOGIC ---------------- #
 def start_game():
