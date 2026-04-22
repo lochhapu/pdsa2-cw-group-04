@@ -29,11 +29,30 @@ class KnightSprite:
 
         self.current_state = list(paths.keys())[0]
         self.image = canvas.create_image(0, 0, image=self.animations[self.current_state][0])
+        
+        self.facing_left = False
+        self.current_frame_idx = 0
+        self._animation_job = None
+        self._start_state_animation()
+
+    def _start_state_animation(self):
+        if self._animation_job:
+            self.canvas.after_cancel(self._animation_job)
+            
+        if self.current_state == "idle":
+            frames = self._get_mirrored_frames("idle") if self.facing_left else self.animations["idle"]
+            self.current_frame_idx = (self.current_frame_idx + 1) % len(frames)
+            self.canvas.itemconfig(self.image, image=frames[self.current_frame_idx])
+            
+        self._animation_job = self.canvas.after(100, self._start_state_animation)
 
     def change_state(self, state):
         if state in self.animations:
             self.current_state = state
-            self.canvas.itemconfig(self.image, image=self.animations[state][0])
+            self.current_frame_idx = 0
+            
+            frames = self._get_mirrored_frames(state) if self.facing_left else self.animations[state]
+            self.canvas.itemconfig(self.image, image=frames[0])
 
     def move_to(self, x, y):
         self.canvas.coords(self.image, x, y)
@@ -49,9 +68,9 @@ class KnightSprite:
         dy = (y2 - y1) / steps
 
         # Determine direction and get appropriate frames
-        moving_left = x2 < x1
+        self.facing_left = x2 < x1
         self.change_state("jump")
-        frames_to_use = self._get_mirrored_frames("jump") if moving_left else self.animations["jump"]
+        frames_to_use = self._get_mirrored_frames("jump") if self.facing_left else self.animations["jump"]
 
         step = 0
 

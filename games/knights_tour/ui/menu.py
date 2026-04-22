@@ -9,13 +9,15 @@ except ImportError:
     display_algorithm_chart = None
 import tkinter.simpledialog as simpledialog
 import tkinter.messagebox as messagebox
+import os
+from PIL import Image, ImageTk
 
 class MainMenu:
     def __init__(self, root):
         self.root = root
-        self.root.title("Knight's Tour Problem")
+        self.root.title("Knight's Tour")
         # Initialize menu size
-        self.root.geometry("500x400")
+        self.root.geometry("500x550")  # increased height to fit the animation
         self.root.resizable(False, False)
         self.root.configure(bg="#2c3e50")  # background color
 
@@ -31,12 +33,37 @@ class MainMenu:
         # Title
         title = tk.Label(
             frame,
-            text="Knight's Tour Problem",
+            text="Knight's Tour",
             font=("Arial", 22, "bold"),
             bg="#2c3e50",
             fg="white"
         )
-        title.pack(pady=30)
+        title.pack(pady=10)
+
+        # Animation
+        self.idle_frames = []
+        self.idle_frame_idx = 0
+        self.animation_job = None
+        try:
+            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            idle_path = os.path.join(base_dir, "assets", "knight", "IDLE.png")
+            
+            sheet = Image.open(idle_path)
+            # The IDLE sprite has 7 frames, so width is 672 / 7 = 96
+            num_frames = 7
+            frame_width = sheet.width // num_frames
+            scale_factor = 2 
+            
+            for i in range(num_frames):
+                frame_img = sheet.crop((i * frame_width, 0, (i + 1) * frame_width, sheet.height))
+                frame_img = frame_img.resize((frame_width * scale_factor, sheet.height * scale_factor), Image.NEAREST)
+                self.idle_frames.append(ImageTk.PhotoImage(frame_img))
+                
+            self.anim_label = tk.Label(frame, bg="#2c3e50")
+            self.anim_label.pack(pady=10)
+            self._animate_idle()
+        except Exception as e:
+            print("Failed to load IDLE animation:", e)
 
         # Buttons
         self.create_button(frame, "Start Game", self.start_game)
@@ -64,6 +91,12 @@ class MainMenu:
         # Hover effect (because we have standards now)
         btn.bind("<Enter>", lambda e: btn.config(bg="#2980b9"))
         btn.bind("<Leave>", lambda e: btn.config(bg="#3498db"))
+
+    def _animate_idle(self):
+        if self.idle_frames:
+            self.anim_label.config(image=self.idle_frames[self.idle_frame_idx])
+            self.idle_frame_idx = (self.idle_frame_idx + 1) % len(self.idle_frames)
+            self.animation_job = self.root.after(100, self._animate_idle)
 
     def start_game(self):
         # Prompt for player name and optionally cheat code
