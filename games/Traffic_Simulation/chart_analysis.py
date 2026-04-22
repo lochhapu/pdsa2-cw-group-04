@@ -1,13 +1,3 @@
-"""
-traffic_chart.py
-Run this file independently to simulate 20 rounds of the Traffic Flow Game
-and display a comparison chart of Ford-Fulkerson vs Edmonds-Karp execution times.
-
-Run with: python traffic_chart.py
-Requires:  traffic_game.py in the same folder
-           pip install matplotlib
-"""
-
 import time
 import copy
 import matplotlib.pyplot as plt
