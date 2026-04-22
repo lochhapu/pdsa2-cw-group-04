@@ -7,8 +7,6 @@ try:
     from chart_algo import display_algorithm_chart
 except ImportError:
     display_algorithm_chart = None
-import tkinter.simpledialog as simpledialog
-import tkinter.messagebox as messagebox
 import os
 from PIL import Image, ImageTk
 
@@ -16,18 +14,18 @@ class MainMenu:
     def __init__(self, root):
         self.root = root
         self.root.title("Knight's Tour")
-        # Initialize menu size
-        self.root.geometry("500x550")  # increased height to fit the animation
-        self.root.resizable(False, False)
         self.root.configure(bg="#2c3e50")  # background color
 
         self.menu_frame = None
+        self.profile_panel = None
         self.board = None
         self.controls = None
+        self.notification_label = None
+        self.notification_timer = None
 
         # Container frame (for better alignment)
         frame = tk.Frame(root, bg="#2c3e50")
-        frame.pack(expand=True)
+        frame.pack(expand=True, fill=tk.BOTH)
         self.menu_frame = frame
 
         # Title
@@ -99,79 +97,69 @@ class MainMenu:
             self.animation_job = self.root.after(100, self._animate_idle)
 
     def start_game(self):
-        # Prompt for player name and optionally cheat code
-        dialog_result = self._show_player_name_dialog()
-        if not dialog_result or not dialog_result.get("name"):
-            return  # User cancelled
+        """Show profile selection panel instead of dialog."""
+        # Hide main menu buttons
+        for widget in self.menu_frame.winfo_children():
+            if widget not in [self.anim_label]:
+                widget.pack_forget()
         
-        player_name = dialog_result["name"]
-        cheat_code = dialog_result.get("cheat_code")
-        
-        # Get or create player in database
-        try:
-            db = DatabaseHelper()
-            player_id = db.create_or_get_player(player_name, cheat_code)
-            db.close()
-        except Exception as e:
-            messagebox.showerror("Database Error", f"Failed to create player: {e}")
-            return
-        
-        # Hide menu
-        self.menu_frame.pack_forget()
-        
-        # Un-constrain geometry so board and HUD can fit properly
-        self.root.geometry("") 
-        self.root.resizable(True, True)
-        self.root.configure(bg="SystemButtonFace") # Reset to default OS bg
-        
-        # Create board and controls HUD with player_id and callback
-        self.board = Board(self.root, player_id=player_id, on_exit_menu=self.return_to_menu, cheat_code=cheat_code)
-        self.controls = Controls(self.root, self.board)
+        # Show profile selection panel
+        self._show_profile_selection_panel()
 
-    def _show_player_name_dialog(self):
-        """Show custom player profile selection dialog."""
-        dialog = tk.Toplevel(self.root)
-        dialog.title("Select Profile")
-        dialog.geometry("400x380")
-        dialog.resizable(False, False)
-        dialog.attributes('-topmost', True)
+    def _show_profile_selection_panel(self):
+        """Show inline profile selection panel."""
+        if self.profile_panel:
+            self.profile_panel.destroy()
         
-        # Center dialog on parent window
-        dialog.transient(self.root)
+        self.profile_panel = tk.Frame(self.menu_frame, bg="#34495e", relief=tk.RAISED, bd=2)
+        self.profile_panel.pack(pady=20, padx=20, fill=tk.BOTH, expand=True)
         
+        # Title
+        title_label = tk.Label(
+            self.profile_panel,
+            text="Choose your profile, brave knight!",
+            font=("Arial", 14, "bold"),
+            fg="white",
+            bg="#34495e"
+        )
+        title_label.pack(pady=10)
+        
+        # Get profiles
         try:
             db = DatabaseHelper()
             players = db.get_all_players()
             db.close()
         except:
             players = []
-            
+        
         profiles = [p[1] for p in players[:15]]
         options = profiles + ["+ Create New Profile"]
         
-        # Title label
-        title_label = tk.Label(
-            dialog,
-            text="Choose your profile, brave knight!",
-            font=("Arial", 14, "bold"),
-            fg="#2c3e50"
-        )
-        title_label.pack(pady=10)
-        
+        # Profile dropdown
         profile_var = tk.StringVar()
         profile_var.set(profiles[0] if profiles else "+ Create New Profile")
         
         profile_dropdown = ttk.Combobox(
-            dialog,
+            self.profile_panel,
             textvariable=profile_var,
             values=options,
             state="readonly",
             font=("Arial", 12),
-            width=23
+            width=25
         )
         profile_dropdown.pack(pady=5)
         
-        new_name_frame = tk.Frame(dialog)
+        # New name entry frame (hidden by default)
+        new_name_frame = tk.Frame(self.profile_panel, bg="#34495e")
+        
+        name_label = tk.Label(
+            new_name_frame,
+            text="New Profile Name:",
+            font=("Arial", 10),
+            fg="white",
+            bg="#34495e"
+        )
+        name_label.pack()
         
         name_entry = tk.Entry(
             new_name_frame,
@@ -184,31 +172,32 @@ class MainMenu:
         )
         name_entry.pack(pady=5)
         new_name_frame.pack_forget()
+        
         if not profiles:
             new_name_frame.pack(pady=5)
             name_entry.focus()
-            
+        
         def on_profile_change(*args):
             if profile_var.get() == "+ Create New Profile":
                 new_name_frame.pack(pady=5)
                 name_entry.focus()
             else:
                 new_name_frame.pack_forget()
-                
+        
         profile_var.trace_add("write", on_profile_change)
         
-        # Cheat code Title label
+        # Cheat code
         cheat_label = tk.Label(
-            dialog,
+            self.profile_panel,
             text="(Optional) Enter cheat code:",
-            font=("Arial", 12),
-            fg="#2c3e50"
+            font=("Arial", 10),
+            fg="white",
+            bg="#34495e"
         )
         cheat_label.pack(pady=5)
         
-        # Cheat code Input field
         cheat_entry = tk.Entry(
-            dialog,
+            self.profile_panel,
             font=("Arial", 12),
             width=25,
             bg="#ecf0f1",
@@ -218,43 +207,62 @@ class MainMenu:
         )
         cheat_entry.pack(pady=5)
         
-        # Result variable
-        result = {"name": None, "cheat_code": None}
+        # Notification label for validation errors
+        error_label = tk.Label(
+            self.profile_panel,
+            text="",
+            font=("Arial", 10),
+            fg="#e74c3c",
+            bg="#34495e"
+        )
+        error_label.pack(pady=5)
         
         def on_submit():
             is_new = (profile_var.get() == "+ Create New Profile")
+            
+            # Validation
             if is_new:
                 if len(profiles) >= 15:
-                    messagebox.showwarning("Profile Limit", "Maximum of 15 profiles reached. Please choose an existing profile.")
+                    error_label.config(text="⚠ Maximum of 15 profiles reached!")
                     return
                 name = name_entry.get().strip()
                 if not name:
-                    messagebox.showwarning("Empty Name", "Please enter a valid name!")
+                    error_label.config(text="⚠ Please enter a valid name!")
                     return
                 if len(name) > 50:
-                    messagebox.showwarning("Name Too Long", "Name must be 50 characters or less!")
+                    error_label.config(text="⚠ Name must be 50 characters or less!")
                     return
                 if name in profiles:
-                    messagebox.showwarning("Name Exists", "Profile name already exists. Please choose the profile from the dropdown.")
+                    error_label.config(text="⚠ Profile already exists!")
                     return
             else:
                 name = profile_var.get()
-                
-            cheat_code = cheat_entry.get().strip()
             
-            result["name"] = name
+            cheat_code = cheat_entry.get().strip() or None
             
-            if cheat_code:
-                result["cheat_code"] = cheat_code
-                
-            dialog.destroy()
+            # Create player
+            try:
+                db = DatabaseHelper()
+                player_id = db.create_or_get_player(name, cheat_code)
+                db.close()
+            except Exception as e:
+                error_label.config(text=f"⚠ Database error: {str(e)[:40]}")
+                return
+            
+            # Start game
+            self._start_game_with_player(player_id, cheat_code)
         
         def on_cancel():
-            dialog.destroy()
+            # Hide profile panel and show menu again
+            self.profile_panel.destroy()
+            self.profile_panel = None
+            for widget in self.menu_frame.winfo_children():
+                if isinstance(widget, tk.Button):
+                    widget.pack(pady=10)
         
-        # Buttons frame
-        button_frame = tk.Frame(dialog)
-        button_frame.pack(pady=20)
+        # Buttons
+        button_frame = tk.Frame(self.profile_panel, bg="#34495e")
+        button_frame.pack(pady=15)
         
         submit_btn = tk.Button(
             button_frame,
@@ -284,36 +292,52 @@ class MainMenu:
         )
         cancel_btn.pack(side=tk.LEFT, padx=5)
         
-        # Allow Enter key to submit
+        # Bind Enter key
         name_entry.bind("<Return>", lambda e: on_submit())
         cheat_entry.bind("<Return>", lambda e: on_submit())
+
+    def _start_game_with_player(self, player_id, cheat_code):
+        """Start the game with the given player."""
+        # Hide menu
+        self.menu_frame.pack_forget()
         
-        # Wait for dialog to close
-        dialog.wait_window()
+        # Reset window background
+        self.root.configure(bg="SystemButtonFace")
         
-        return result
+        # Create board and controls HUD with player_id and callback
+        self.board = Board(self.root, player_id=player_id, on_exit_menu=self.return_to_menu, cheat_code=cheat_code)
+        self.controls = Controls(self.root, self.board)
 
     def return_to_menu(self):
         """Return from game to main menu."""
         # Destroy board and controls
         if self.board:
-            self.board.canvas.destroy()
+            if hasattr(self.board, 'container'):
+                self.board.container.destroy()
+            else:
+                self.board.canvas.destroy()
             self.board = None
         if self.controls:
             self.controls = None
+        if self.profile_panel:
+            self.profile_panel.destroy()
+            self.profile_panel = None
         
         # Clean up any remaining widgets except menu_frame
         for widget in self.root.winfo_children():
             if widget != self.menu_frame:
                 widget.destroy()
         
-        # Reset window geometry and resizability
-        self.root.geometry("500x400")
-        self.root.resizable(False, False)
+        # Reset window background
         self.root.configure(bg="#2c3e50")
         
         # Show menu frame again
-        self.menu_frame.pack(expand=True)
+        self.menu_frame.pack(expand=True, fill=tk.BOTH)
+        
+        # Show all buttons (recreate them if needed)
+        for widget in self.menu_frame.winfo_children():
+            if isinstance(widget, tk.Button):
+                widget.pack(pady=10)
 
     def view_scores(self):
         try:
@@ -324,7 +348,7 @@ class MainMenu:
             top.title("Leaderboard")
             top.geometry("550x350")
             top.configure(bg="#2c3e50")
-            top.resizable(False, False)
+            top.resizable(True, True)
             
             title = tk.Label(top, text="Leaderboard", font=("Arial", 18, "bold"), bg="#2c3e50", fg="white")
             title.pack(pady=15)
@@ -356,24 +380,47 @@ class MainMenu:
                                   bg="#e74c3c", fg="white", activebackground="#c0392b", activeforeground="white", bd=0, padx=20, pady=5)
             close_btn.pack(pady=20)
             
-            # Make the window modal
-            top.transient(self.root)
-            top.grab_set()
-            self.root.wait_window(top)
-            
         except Exception as e:
-            messagebox.showerror("Error", f"Failed to load leaderboard: {e}")
+            self._show_notification(f"Error loading leaderboard: {str(e)[:50]}", error=True)
 
     def view_chart(self):
         """Display the algorithm comparison chart."""
         if display_algorithm_chart is None:
-            messagebox.showerror("Error", "Chart algorithms module (chart_algo.py) could not be loaded. Ensure matplotlib is installed.")
+            self._show_notification("Chart module not available. Install matplotlib.", error=True)
             return
 
         try:
             display_algorithm_chart()
         except Exception as e:
-            messagebox.showerror("Error", f"Failed to display chart: {e}")
+            self._show_notification(f"Failed to display chart: {str(e)[:50]}", error=True)
+
+    def _show_notification(self, message, error=False):
+        """Show a temporary inline notification."""
+        if self.notification_label:
+            self.notification_label.destroy()
+        
+        fg_color = "#e74c3c" if error else "#27ae60"
+        
+        self.notification_label = tk.Label(
+            self.root,
+            text=message,
+            font=("Arial", 10),
+            fg=fg_color,
+            bg="#2c3e50"
+        )
+        self.notification_label.pack(pady=5)
+        
+        if self.notification_timer:
+            self.root.after_cancel(self.notification_timer)
+        
+        self.notification_timer = self.root.after(4000, lambda: self._clear_notification())
+
+    def _clear_notification(self):
+        """Clear the notification label."""
+        if self.notification_label:
+            self.notification_label.destroy()
+            self.notification_label = None
+        self.notification_timer = None
 
 
 if __name__ == "__main__":

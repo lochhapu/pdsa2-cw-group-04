@@ -1,5 +1,4 @@
 import tkinter as tk
-from tkinter import messagebox
 import random
 from PIL import Image, ImageTk
 from logic.knights_tour import knights_tour, knights_tour_backtracking
@@ -18,8 +17,19 @@ class Board:
         self.on_exit_menu = on_exit_menu
         self.game_start_time = None
         self.game_recorded = False
+        self.overlay_panel = None
+        self.notification_label = None
+        self.notification_timer = None
 
-        self.canvas = tk.Canvas(root)
+        # Container frame for canvas and overlays with dark background
+        self.container = tk.Frame(root, bg="#2c3e50")
+        self.container.pack(fill=tk.BOTH, expand=True)
+
+        # Board frame to center the canvas
+        self.board_frame = tk.Frame(self.container, bg="#2c3e50")
+        self.board_frame.pack(expand=True, pady=10)
+
+        self.canvas = tk.Canvas(self.board_frame, bg="#2c3e50", highlightthickness=0)
         self.canvas.pack()
         self.canvas.bind("<Button-1>", self.on_click)
 
@@ -67,7 +77,7 @@ class Board:
         self.valid_moves = []
 
         self.cell_size = 480 // self.size
-        self.canvas.config(width=480, height=480)
+        self.canvas.config(width=480, height=480, bg="#2c3e50")
 
         # Resize textures for the current cell size
         if self.grass_img and self.stone_img:
@@ -166,128 +176,50 @@ class Board:
                 self.blue_highlights.append(hl)
 
     def _show_stuck_dialog(self):
-        """Show custom dialog with two options when player gets stuck."""
-        dialog = tk.Toplevel(self.root)
-        dialog.title("You Got Stuck!")
-        dialog.geometry("400x150")
-        dialog.resizable(False, False)
-        dialog.attributes('-topmost', True)
-        
-        # Center the dialog
-        dialog.transient(self.root)
-        
-        # Message label
-        message = tk.Label(
-            dialog,
-            text="You got stuck! What would you like to do?",
-            font=("Arial", 12),
-            wraplength=350
+        """Show inline overlay panel when player gets stuck."""
+        self._show_overlay_dialog(
+            title="You Got Stuck!",
+            message="You got stuck! What would you like to do?",
+            buttons=[
+                ("God take the wheel", lambda: self._on_stuck_algorithm()),
+                ("Exit to Menu", lambda: self._on_stuck_exit())
+            ]
         )
-        message.pack(pady=20)
-        
-        # Button frame
-        button_frame = tk.Frame(dialog)
-        button_frame.pack(pady=10)
-        
-        def on_algorithm():
-            dialog.destroy()
-            self._record_game_result("died")
-            self._start_algorithm_from_beginning()
-        
-        def on_exit():
-            dialog.destroy()
-            self._record_game_result("quit")
-            if self.on_exit_menu:
-                self.on_exit_menu()
-        
-        # Buttons
-        btn_algorithm = tk.Button(
-            button_frame,
-            text="God take the wheel",
-            command=on_algorithm,
-            font=("Arial", 11),
-            width=20,
-            bg="#3498db",
-            fg="white",
-            activebackground="#2980b9"
-        )
-        btn_algorithm.pack(side=tk.LEFT, padx=5)
-        
-        btn_exit = tk.Button(
-            button_frame,
-            text="Exit to Menu",
-            command=on_exit,
-            font=("Arial", 11),
-            width=15,
-            bg="#e74c3c",
-            fg="white",
-            activebackground="#c0392b"
-        )
-        btn_exit.pack(side=tk.LEFT, padx=5)
-        
-        # Wait for dialog to close
-        dialog.wait_window()
+
+    def _on_stuck_algorithm(self):
+        """Handle algorithm selection when stuck."""
+        self._clear_overlay()
+        self._record_game_result("died")
+        self._start_algorithm_from_beginning()
+
+    def _on_stuck_exit(self):
+        """Handle exit to menu when stuck."""
+        self._clear_overlay()
+        self._record_game_result("quit")
+        if self.on_exit_menu:
+            self.on_exit_menu()
 
     def _show_win_dialog(self):
-        """Show custom dialog with two options when player wins the game."""
-        dialog = tk.Toplevel(self.root)
-        dialog.title("You Won!")
-        dialog.geometry("400x150")
-        dialog.resizable(False, False)
-        dialog.attributes('-topmost', True)
-        
-        # Center the dialog
-        dialog.transient(self.root)
-        
-        # Message label
-        message = tk.Label(
-            dialog,
-            text="Congratulations, you completed the Knight's Tour!\nWhat would you like to do?",
-            font=("Arial", 12),
-            wraplength=350
+        """Show inline overlay panel when player wins the game."""
+        self._show_overlay_dialog(
+            title="You Won!",
+            message="Congratulations, you completed the Knight's Tour!\nWhat would you like to do?",
+            buttons=[
+                ("Play Again", lambda: self._on_win_play_again()),
+                ("Return to Main Menu", lambda: self._on_win_exit())
+            ]
         )
-        message.pack(pady=15)
-        
-        # Button frame
-        button_frame = tk.Frame(dialog)
-        button_frame.pack(pady=5)
-        
-        def on_play_again():
-            dialog.destroy()
-            self.reset_board()
-        
-        def on_exit():
-            dialog.destroy()
-            if self.on_exit_menu:
-                self.on_exit_menu()
-        
-        # Buttons
-        btn_again = tk.Button(
-            button_frame,
-            text="Play Again",
-            command=on_play_again,
-            font=("Arial", 11),
-            width=15,
-            bg="#2ecc71",
-            fg="white",
-            activebackground="#27ae60"
-        )
-        btn_again.pack(side=tk.LEFT, padx=5)
-        
-        btn_exit = tk.Button(
-            button_frame,
-            text="Return to Main Menu",
-            command=on_exit,
-            font=("Arial", 11),
-            width=20,
-            bg="#3498db",
-            fg="white",
-            activebackground="#2980b9"
-        )
-        btn_exit.pack(side=tk.LEFT, padx=5)
-        
-        # Wait for dialog to close
-        dialog.wait_window()
+
+    def _on_win_play_again(self):
+        """Handle play again selection."""
+        self._clear_overlay()
+        self.reset_board()
+
+    def _on_win_exit(self):
+        """Handle exit to menu after win."""
+        self._clear_overlay()
+        if self.on_exit_menu:
+            self.on_exit_menu()
 
     def highlight_tile(self, r, c):
         x1, y1 = c * self.cell_size, r * self.cell_size
@@ -387,7 +319,7 @@ class Board:
             self.game_start_time = time.time()
             self.animate_path(self.player_path, 0)
         else:
-            messagebox.showerror("Failure", "No solution could be found from the starting position! (This should not happen)")
+            self._show_notification("No solution could be found from the starting position!", error=True)
 
     def _record_game_result(self, status):
         """Record the game result to the database."""
@@ -458,3 +390,93 @@ class Board:
             self.animate_path(path, index + 1)
 
         self.knight.animate_jump(start, end, callback=on_step_done)
+
+    def _show_overlay_dialog(self, title, message, buttons):
+        """Show an inline overlay dialog with buttons."""
+        self._clear_overlay()
+        
+        # Create a centered dialog frame without full-screen overlay
+        self.overlay_panel = tk.Frame(self.container, bg="#34495e", relief=tk.RAISED, bd=3)
+        self.overlay_panel.place(relx=0.5, rely=0.5, anchor=tk.CENTER, relwidth=0.6, relheight=0.5)
+        
+        # Title
+        title_label = tk.Label(
+            self.overlay_panel,
+            text=title,
+            font=("Arial", 16, "bold"),
+            fg="white",
+            bg="#34495e"
+        )
+        title_label.pack(pady=15)
+        
+        # Message
+        msg_label = tk.Label(
+            self.overlay_panel,
+            text=message,
+            font=("Arial", 12),
+            fg="white",
+            bg="#34495e",
+            wraplength=400,
+            justify=tk.CENTER
+        )
+        msg_label.pack(pady=10, padx=10)
+        
+        # Buttons frame
+        button_frame = tk.Frame(self.overlay_panel, bg="#34495e")
+        button_frame.pack(pady=20)
+        
+        for btn_text, btn_command in buttons:
+            btn = tk.Button(
+                button_frame,
+                text=btn_text,
+                command=btn_command,
+                font=("Arial", 11),
+                bg="#3498db",
+                fg="white",
+                activebackground="#2980b9",
+                width=15,
+                bd=0,
+                cursor="hand2",
+                padx=10,
+                pady=8
+            )
+            btn.pack(side=tk.LEFT, padx=5)
+
+    def _clear_overlay(self):
+        """Clear the overlay dialog if it exists."""
+        if self.overlay_panel:
+            self.overlay_panel.destroy()
+            self.overlay_panel = None
+
+    def _show_notification(self, message, error=False):
+        """Show a temporary inline notification at the top of the board."""
+        if self.notification_label:
+            self.notification_label.destroy()
+        
+        fg_color = "#e74c3c" if error else "#27ae60"
+        bg_color = "#2c3e50"
+        
+        self.notification_label = tk.Label(
+            self.container,
+            text=message,
+            font=("Arial", 11),
+            fg=fg_color,
+            bg=bg_color,
+            wraplength=400,
+            justify=tk.CENTER,
+            padx=10,
+            pady=8
+        )
+        self.notification_label.pack(pady=5)
+        
+        if self.notification_timer:
+            self.root.after_cancel(self.notification_timer)
+        
+        self.notification_timer = self.root.after(4000, self._clear_notification)
+
+    def _clear_notification(self):
+        """Clear the notification label."""
+        if self.notification_label:
+            self.notification_label.destroy()
+            self.notification_label = None
+        self.notification_timer = None
