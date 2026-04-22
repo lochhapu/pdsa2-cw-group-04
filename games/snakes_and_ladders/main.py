@@ -246,7 +246,7 @@ def show_board():
         )
         inner.pack()
 
-    create_chip(top_frame, f"Round {currentRound}/5")
+    create_chip(top_frame, f"Round {currentRound}/20")
     create_chip(top_frame, f"Score {score}")
 
     # ---------------- TIMER DISPLAY ---------------- #
@@ -389,8 +389,47 @@ def show_detailed_results():
         fg=TEXT
     ).pack(pady=20)
 
-    table_frame = tk.Frame(card, bg=CARD_COLOR)
-    table_frame.pack(pady=10)
+    # ---------------- SCROLLABLE TABLE ---------------- #
+    container = tk.Frame(card, bg=CARD_COLOR)
+    container.pack(pady=10)
+
+    canvas = tk.Canvas(container, bg=CARD_COLOR, highlightthickness=0, width=600, height=450)
+    scrollbar = tk.Scrollbar(container, orient="vertical", command=canvas.yview)
+
+    scrollable_frame = tk.Frame(canvas, bg=CARD_COLOR)
+
+    scrollable_frame.bind(
+        "<Configure>",
+        lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+    )
+
+    # 👇 CENTER the table inside canvas
+    window = canvas.create_window((0, 0), window=scrollable_frame, anchor="n")
+
+    def center_table(event):
+        canvas_width = event.width
+        canvas.itemconfig(window, width=canvas_width)
+
+    canvas.bind("<Configure>", center_table)
+
+    canvas.configure(yscrollcommand=scrollbar.set)
+
+    # 👇 Center the whole block
+    canvas.pack(side="left")
+    scrollbar.pack(side="right", fill="y")
+
+    # use this instead
+    table_frame = scrollable_frame
+
+    def _on_mousewheel(event):
+        canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+
+    # Windows & Mac
+    canvas.bind_all("<MouseWheel>", _on_mousewheel)
+
+    # Linux (just in case)
+    canvas.bind_all("<Button-4>", lambda e: canvas.yview_scroll(-1, "units"))
+    canvas.bind_all("<Button-5>", lambda e: canvas.yview_scroll(1, "units"))
 
     headers = ["Round", "BFS Time (s)", "DFS Time (s)"]
 
@@ -474,11 +513,11 @@ def show_result():
     card = create_card(main_frame)
 
     # ---------------- RESULT STATE ---------------- #
-    if score >= 40:
+    if score >= 140:   # 70%+
         result_text = "YOU WIN!"
         color = "#22c55e"
         emoji = "🏆"
-    elif score >= 20:
+    elif score >= 80:  # 40%+
         result_text = "IT'S A DRAW!"
         color = "#f59e0b"
         emoji = "🤝"
@@ -520,7 +559,7 @@ def show_result():
     ).pack(pady=(5, 5))
 
     tk.Label(card,
-        text=f"Score: {score}/50",
+        text=f"Score: {score}/200",
         font=("Segoe UI", 16, "bold"),
         bg=CARD_COLOR,
         fg="#86efac"

@@ -7,12 +7,11 @@ import tempfile
 from unittest.mock import MagicMock
 import sys
 
-# Stub out tkinter so tests run headlessly (no display required)
 sys.modules.setdefault("tkinter", MagicMock())
 sys.modules.setdefault("tkinter.ttk", MagicMock())
 sys.modules.setdefault("tkinter.messagebox", MagicMock())
 
-import traffic_game as tg
+import main as tg
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -24,7 +23,6 @@ class TestGraphGeneration(unittest.TestCase):
         self.graph, self.caps = tg.generate_graph()
 
     def test_all_edges_present(self):
-        """All 13 required directed edges must exist."""
         for u, v in tg.EDGES:
             self.assertIn((u, v), self.caps,
                           f"Edge ({u}, {v}) missing from caps")
@@ -32,18 +30,15 @@ class TestGraphGeneration(unittest.TestCase):
                           f"Destination {v} missing from graph[{u}]")
 
     def test_capacity_range(self):
-        """Every capacity must be an integer in [5, 15]."""
         for (u, v), cap in self.caps.items():
             self.assertIsInstance(cap, int)
             self.assertGreaterEqual(cap, 5,  f"Cap {cap} for ({u},{v}) < 5")
             self.assertLessEqual(cap,   15, f"Cap {cap} for ({u},{v}) > 15")
 
     def test_correct_number_of_edges(self):
-        """Exactly 13 edges must be generated."""
         self.assertEqual(len(self.caps), 13)
 
     def test_randomness_across_calls(self):
-        """generate_graph() must not always return identical capacities."""
         results = set()
         for _ in range(20):
             _, caps = tg.generate_graph()
@@ -51,12 +46,10 @@ class TestGraphGeneration(unittest.TestCase):
         self.assertGreater(len(results), 1)
 
     def test_graph_and_caps_consistency(self):
-        """graph[u][v] must equal caps[(u,v)] for every edge."""
         for (u, v), cap in self.caps.items():
             self.assertEqual(self.graph[u][v], cap)
 
     def test_required_nodes_present(self):
-        """All nine nodes must appear somewhere in the edge list."""
         required = {"A", "B", "C", "D", "E", "F", "G", "H", "T"}
         seen = set()
         for u, v in self.caps:
@@ -86,7 +79,6 @@ class TestFordFulkerson(unittest.TestCase):
         self.assertEqual(tg.ford_fulkerson(g), 0)
 
     def test_source_equals_sink_returns_zero(self):
-        """FIX: source == sink must return 0 immediately, not hang."""
         g = {"A": {"B": 5}, "B": {"T": 5}}
         self.assertEqual(tg.ford_fulkerson(g, source="A", sink="A"), 0)
 
@@ -97,7 +89,6 @@ class TestFordFulkerson(unittest.TestCase):
         self.assertEqual(g, original)
 
     def test_known_game_graph(self):
-        """All-10 graph: only G→T and H→T feed sink, so max flow = 20."""
         g = {
             "A": {"B": 10, "C": 10, "D": 10},
             "B": {"E": 10, "F": 10},
@@ -139,7 +130,6 @@ class TestEdmondsKarp(unittest.TestCase):
         self.assertEqual(tg.edmonds_karp(g), 0)
 
     def test_source_equals_sink_returns_zero(self):
-        """FIX: source == sink must return 0 immediately, not loop."""
         g = {"A": {"B": 5}, "B": {"T": 5}}
         self.assertEqual(tg.edmonds_karp(g, source="A", sink="A"), 0)
 
@@ -201,17 +191,6 @@ class TestAlgorithmAgreement(unittest.TestCase):
 #  5. DATABASE TESTS
 # ─────────────────────────────────────────────────────────────────────────────
 class TestDatabase(unittest.TestCase):
-    """
-    Redirects sqlite3.connect to a temp file so real DB is untouched.
-
-    Windows locks SQLite files for the lifetime of every open connection.
-    To avoid PermissionError on tearDown we:
-      1. Track every connection opened via our patched sqlite3.connect.
-      2. Close them all in tearDown before deleting the temp file.
-      3. Use a helper _conn() that registers its connection the same way,
-         and always call it as a context manager so the connection is closed
-         after the with-block.
-    """
 
     def setUp(self):
         self.db_fd, self.db_path = tempfile.mkstemp(suffix=".db")
@@ -235,20 +214,17 @@ class TestDatabase(unittest.TestCase):
         tg.init_db()
 
     def tearDown(self):
-        # Restore the real connect first so nothing new can open the file.
         sqlite3.connect = self._orig_connect
-        # Close every tracked connection — critical on Windows.
         for conn in self._open_conns:
             try:
                 conn.close()
             except Exception:
                 pass
         self._open_conns.clear()
-        # Now the file is unlocked and can be removed.
         try:
             os.unlink(self.db_path)
         except OSError:
-            pass   # best-effort; temp dir will clean up eventually
+            pass  
 
     def _conn(self):
         """Open a direct (unpatched) connection and register it for cleanup."""
@@ -270,7 +246,6 @@ class TestDatabase(unittest.TestCase):
         self.assertIsNotNone(c.fetchone())
 
     def test_init_db_creates_correct_answers_table(self):
-        """FIX: new correct_answers table must be created by init_db."""
         conn = self._conn()
         c = conn.cursor()
         c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='correct_answers'")
@@ -340,7 +315,6 @@ class TestDatabase(unittest.TestCase):
 
     # ── FIX: correct_answers table only written on wins ───────────────────────
     def test_win_saves_to_correct_answers(self):
-        """FIX: a winning round must insert a row into correct_answers."""
         tg.save_round("Judy", 2, 17, 17, "win", 0.5, 0.4)
         c = self._conn().cursor()
         c.execute("""SELECT player_name, correct_answer, round_number
@@ -352,7 +326,6 @@ class TestDatabase(unittest.TestCase):
         self.assertEqual(row[2], 2)
 
     def test_lose_does_not_save_to_correct_answers(self):
-        """FIX: a losing round must NOT insert into correct_answers."""
         tg.save_round("Karl", 1, 20, 15, "lose", 0.3, 0.3)
         c = self._conn().cursor()
         c.execute("SELECT COUNT(*) FROM correct_answers WHERE player_name='Karl'")
@@ -360,7 +333,6 @@ class TestDatabase(unittest.TestCase):
                          "Losing round incorrectly saved to correct_answers")
 
     def test_only_wins_accumulate_in_correct_answers(self):
-        """Mix of wins and losses — only wins appear in correct_answers."""
         tg.save_round("Lena", 1, 18, 18, "win",  0.1, 0.1)
         tg.save_round("Lena", 2, 20, 99, "lose", 0.2, 0.2)
         tg.save_round("Lena", 3, 22, 22, "win",  0.3, 0.3)

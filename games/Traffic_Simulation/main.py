@@ -33,8 +33,6 @@ def init_db():
             created_at        TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
-    # FIX: separate table that records only correct identifications,
-    # per requirement: "save that person's name along with the correct response"
     c.execute("""
         CREATE TABLE IF NOT EXISTS correct_answers (
             id             INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -66,13 +64,6 @@ def get_or_create_player(name: str) -> int:
 
 
 def save_round(player_name, round_no, correct, player, result, ff_ms, ek_ms):
-    """
-    Save every round's timing + answers to game_rounds (for analytics).
-    FIX: Additionally, when the player wins, save their name and the correct
-    answer to correct_answers — fulfilling the requirement:
-    'When a game player correctly identifies an answer, save that person's
-    name along with the correct response in the database.'
-    """
     player_id = get_or_create_player(player_name)
     if player_id is None:
         return
@@ -81,7 +72,6 @@ def save_round(player_name, round_no, correct, player, result, ff_ms, ek_ms):
         c = conn.cursor()
         c.execute("PRAGMA foreign_keys = ON")
 
-        # Always record the full round (timing requirement)
         c.execute("""
             INSERT INTO game_rounds
                 (player_id, round_number, correct_answer, player_answer,
@@ -89,7 +79,6 @@ def save_round(player_name, round_no, correct, player, result, ff_ms, ek_ms):
             VALUES (?, ?, ?, ?, ?, ?, ?)
         """, (player_id, round_no, correct, player, result, ff_ms, ek_ms))
 
-        # FIX: Only when the player wins, also log to correct_answers
         if result == "win":
             c.execute("""
                 INSERT INTO correct_answers (player_name, correct_answer, round_number)
@@ -131,8 +120,6 @@ def generate_graph():
 #  FORD-FULKERSON
 # ─────────────────────────────────────────────
 def _dfs(res, u, sink, visited, bottleneck):
-    # FIX: guard against source == sink before touching visited,
-    # so the test_source_equals_sink case returns 0 immediately
     if u == sink:
         return bottleneck
     visited.add(u)
@@ -146,7 +133,6 @@ def _dfs(res, u, sink, visited, bottleneck):
     return 0
 
 def ford_fulkerson(graph, source="A", sink="T"):
-    # FIX: if source == sink, max flow is defined as 0 — avoids infinite loop
     if source == sink:
         return 0
     res = copy.deepcopy(graph)
@@ -164,7 +150,6 @@ def ford_fulkerson(graph, source="A", sink="T"):
 # ─────────────────────────────────────────────
 def edmonds_karp(graph, source="A", sink="T"):
     from collections import deque
-    # FIX: same guard — source == sink means no flow needed
     if source == sink:
         return 0
     res = copy.deepcopy(graph)
