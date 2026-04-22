@@ -285,7 +285,6 @@ def show_board():
             card.after(1000, countdown)
         else:
             # reset timer for next round
-            board_timer = 20
             timer_running = False
             show_question(correct_answer)
 
@@ -660,6 +659,10 @@ def initialize_game():
 def start_round():
     global snakes, ladders, correct_answer
     global bfs_time_global, dfs_time_global
+    global board_timer, timer_running
+
+    board_timer = 20
+    timer_running = False
 
     snakes, ladders = generate_board(BOARD_SIZE)
     correct_answer, dfs_ans, bfs_time_global, dfs_time_global = run_algorithms(BOARD_SIZE)
