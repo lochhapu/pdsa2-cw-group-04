@@ -127,8 +127,8 @@ class GameScreen:
         self.canvas.bind("<Button-1>", self._on_click)
         self._draw_board()
 
-        # START overlay button
-        board_w = N * CELL
+        # START overlay button — centered on the board
+        board_w = N * CELL  # 448px
         board_h = N * CELL
         self.start_overlay = tk.Button(
             board_container,
@@ -149,6 +149,7 @@ class GameScreen:
         )
 
         # ── Action Buttons ────────────────────────────────────
+        # FIX: centre the grid inside a centred frame so it has equal margins
         btn_outer = tk.Frame(self.root, bg=BG_DEEP_PURPLE, pady=15)
         btn_outer.pack()   # no fill=tk.X → centres automatically
 
@@ -185,6 +186,24 @@ class GameScreen:
                     self.canvas.create_text(x1 + CELL // 2, y1 + CELL // 2,
                                             text="♛", font=("Arial", int(CELL * 0.6)),
                                             fill="white" if fill == CONFLICT_RED else BG_DEEP_PURPLE)
+                    
+            # Row numbers left side
+            for row in range(N):
+                self.canvas.create_text(
+                    4, row * CELL + CELL // 2,
+                    text=str(row + 1),
+                    font=("Courier", 7, "bold"),
+                    fill="#d896ff", anchor="w"
+                )
+
+            # Column numbers top
+            for col in range(N):
+                self.canvas.create_text(
+                    col * CELL + CELL // 2, 6,
+                    text=str(col + 1),
+                    font=("Courier", 7, "bold"),
+                    fill="#d896ff"
+                )
 
     def _find_conflicts(self):
         conflict_rows = set()
@@ -202,7 +221,7 @@ class GameScreen:
 
     def _on_click(self, event):
         if not self.game_started:
-            return   # board's locked until START is pressed
+            return   # board is locked until START is pressed
         col = event.x // CELL
         row = event.y // CELL
         if not (0 <= row < N and 0 <= col < N):
@@ -238,7 +257,7 @@ class GameScreen:
         elapsed = datetime.now() - self.start_time
         time_str = f"{elapsed.total_seconds():.1f} seconds"
 
-        board_str = ",".join(map(str, self.board))
+        board_str = ",".join([str(int(x)) for x in self.board])
         session = get_session()
 
         try:
@@ -276,10 +295,24 @@ class GameScreen:
 
             total = session.query(Solution).count()
             claimed = session.query(Solution).filter_by(is_claimed=True).count()
-            if total > 0 and claimed == total:
-                session.query(Solution).update({"is_claimed": False, "claimed_by": None, "claimed_at": None})
-                session.commit()
-                self._show_result_popup("All Found!", "All solutions were claimed! Flags have been reset.", False, color="#d896ff")
+            if not is_new:
+                total = session.query(Solution).count()
+                claimed = session.query(Solution).filter_by(is_claimed=True).count()
+
+                if total > 0 and claimed == total:
+                    session.query(Solution).update({
+                        "is_claimed": False,
+                        "claimed_by": None,
+                        "claimed_at": None
+                    })
+                    session.commit()
+
+                    self._show_result_popup(
+                        "All Found!",
+                        "All solutions were claimed! Flags have been reset.",
+                        False,
+                        color="#d896ff"
+                    )
 
         except Exception as e:
             session.rollback()
@@ -291,7 +324,28 @@ class GameScreen:
         win = tk.Toplevel(self.root)
         win.title(title)
         win.configure(bg=BG_DEEP_PURPLE)
-        win.geometry("450x250")
+        # win.geometry("450x250")
+
+        win.update_idletasks()
+
+        # Get main window position and size
+        main_x = self.root.winfo_rootx()
+        main_y = self.root.winfo_rooty()
+        main_width = self.root.winfo_width()
+        main_height = self.root.winfo_height()
+
+        # Popup size
+        popup_width = 450
+        popup_height = 250
+
+      # Calculate center position
+        x = main_x + (main_width // 2) - (popup_width // 2)
+        y = main_y + (main_height // 2) - (popup_height // 2)
+
+        win.geometry(f"{popup_width}x{popup_height}+{x}+{y}")
+
+
+
         win.resizable(False, False)
         win.grab_set()
 
@@ -362,7 +416,7 @@ class GameScreen:
         tk.Button(win, text="Close", font=("Courier", 10), bg="#4a148c", fg="white",
                   bd=0, padx=15, pady=5, cursor="hand2", command=win.destroy).pack(pady=15)
 
-    # ── Leaderboard ───────────────────────────────────
+    # ── Leaderboard (FIXED) ───────────────────────────────────
     def _progress_window(self):
         session = get_session()
         all_answers = session.query(PlayerAnswer).order_by(PlayerAnswer.submitted_at.asc()).all()
@@ -548,6 +602,7 @@ class GameScreen:
         return tk.Button(parent, text=text, font=("Courier", 10, "bold"), bg=bg, fg=fg,
                          activebackground="#d896ff", activeforeground="#1a0b2e", bd=0,
                          padx=15, pady=8, cursor="hand2", command=cmd)
+
 
 if __name__ == "__main__":
     init_db()
